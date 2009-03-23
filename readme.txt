@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.7.
-Glk API which this implements: version 0.6.0.
+GlkTerm Library: version 0.7.8.
+Glk API which this implements: version 0.6.1.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://www.eblong.com/zarf/glk/index.html
 
@@ -263,6 +263,11 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+0.7.8:
+    Upgraded to Glk API version 0.6.1; i.e., a couple of new gestalt
+    selectors.
+    Fixed dispatch bug for glk_get_char_stream.
 
 0.7.7:
     Fixed a couple of display bugs (one that could cause freezes)

@@ -23,7 +23,7 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
     switch (id) {
         
         case gestalt_Version:
-            return 0x00000600;
+            return 0x00000601;
         
         case gestalt_LineInput:
             if ((val >= 0 && val < 32) || val == '\177') {
@@ -84,11 +84,16 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
 #else /* !OPT_TIMED_INPUT */
             return FALSE;
 #endif /* OPT_TIMED_INPUT */
+
+        case gestalt_Graphics:
+        case gestalt_GraphicsTransparency:
+            return FALSE;
             
         case gestalt_Sound:
         case gestalt_SoundVolume:
         case gestalt_SoundNotify: 
-	    return FALSE;
+        case gestalt_SoundMusic:
+            return FALSE;
   
         default:
             return 0;

@@ -1,6 +1,6 @@
 /* main.c: Top-level source file
         for GlkTerm, curses.h implementation of the Glk API.
-    Glk API which this implements: version 0.6.0.
+    Glk API which this implements: version 0.6.1.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
