@@ -222,15 +222,6 @@ structures) are declared in glkterm.h.
 As you can see from the code, I've kept a policy of catching every error
 that I can possibly catch, and printing visible warnings.
 
-The 32-bit integer identifiers used by the game program (winid_t,
-strid_t, frefid_t) are created by casting structure pointers to uint32.
-See the beginning of glkterm.h for the macros that handle this. If your
-system uses pointers larger than 32 bits, or if there's some wackiness
-that prevents you casting pointers to numbers and back, you'll have to
-create some other identifier system. (A hash table would work fine.)
-(Soon this will all change, when the Glk API goes to opaque C pointers
-instead of integer identifiers.)
-
 Other than that, this code should be portable to any C environment which
 has an ANSI stdio library and a curses.h library. The likely trouble
 spots are glk_fileref_delete_file() and glk_fileref_does_file_exist() --
@@ -263,6 +254,9 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+###:
+    Deleted long-obsolete check on the size of a pointer.
 
 0.8.0:
     Upgraded to Glk API version 0.7.0; added the Unicode functions.
