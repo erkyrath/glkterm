@@ -183,6 +183,11 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
         dwin->dirtybeg = 0;
         dwin->dirtyend = dwin->height;
     }
+    else {
+        if (dwin->dirtyend > dwin->height) {
+	    dwin->dirtyend = dwin->height;
+	}
+    }
     
     if (dwin->dirtybeg == -1)
         return;
@@ -196,6 +201,12 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
             ln->dirtybeg = 0;
             ln->dirtyend = dwin->width;
         }
+	else {
+	    if (ln->dirtyend > dwin->width) {
+	        ln->dirtyend = dwin->width;
+	    }
+	}
+
         if (ln->dirtybeg == -1)
             continue;
         
