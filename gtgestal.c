@@ -13,17 +13,17 @@
 
 glui32 glk_gestalt(glui32 id, glui32 val)
 {
-    return glk_gestalt_ext(id, val, NULL);
+    return glk_gestalt_ext(id, val, NULL, 0);
 }
 
-glui32 glk_gestalt_ext(glui32 id, glui32 val, void *ptr)
+glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
 {
     int ix;
     
     switch (id) {
         
         case gestalt_Version:
-            return 0x00000500;
+            return 0x00000600;
         
         case gestalt_LineInput:
             if ((val >= 0 && val < 32) || val == '\177') {
@@ -55,15 +55,15 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, void *ptr)
         
         case gestalt_CharOutput: 
             if (char_printable_table[(unsigned char)val]) {
-                if (ptr)
-                    *((glui32 *)ptr) = 1;
+                if (arr && arrlen >= 1)
+                    arr[0] = 1;
                 return gestalt_CharOutput_ExactPrint;
             }
             else {
                 char *altstr = gli_ascii_equivalent((unsigned char)val);
                 ix = strlen(altstr);
-                if (ptr)
-                    *((glui32 *)ptr) = ix;
+                if (arr && arrlen >= 1)
+                    arr[0] = ix;
                 if (ix == 4 && altstr[0] == '\\') {
                     /* It's a four-character octal code, "\177". */
                     return gestalt_CharOutput_CannotPrint;

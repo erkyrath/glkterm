@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.5.
-Glk API which this implements: version 0.5.2.
+GlkTerm Library: version 0.7.6.
+Glk API which this implements: version 0.6.0.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://www.eblong.com/zarf/glk/index.html
 
@@ -264,6 +264,9 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+0.7.6:
+    Upgraded to Glk API version 0.6.0; i.e., stubs for hyperlinks.
+
 0.7.5:
     Input of accented characters should work right on non-Latin-1 systems
     now.
@@ -300,7 +303,7 @@ When closing windows, + signs can be left in the window borders.
 
 * Permissions
 
-The source code in this package is copyright 1998-9 by Andrew Plotkin. You
+The source code in this package is copyright 1998-2000 by Andrew Plotkin. You
 may copy and distribute it freely, by any means and under any conditions,
 as long as the code and documentation is not changed. You may also
 incorporate this code into your own program and distribute that, or modify
