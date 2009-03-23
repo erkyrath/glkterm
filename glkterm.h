@@ -86,6 +86,7 @@ struct window_struct {
     
     int line_request;
     int char_request;
+
     glui32 style;
     
     window_t *next; /* in the big linked list of windows */
@@ -157,10 +158,18 @@ extern void (*gli_interrupt_handler)(void);
 
 #ifdef OPT_USE_SIGNALS
     extern int just_resumed;
+    extern int just_killed;
 #ifdef OPT_WINCHANGED_SIGNAL
         extern int screen_size_changed;
 #endif /* OPT_WINCHANGED_SIGNAL */
 #endif /* OPT_USE_SIGNALS */
+
+extern unsigned char char_printable_table[256];
+extern unsigned char char_typable_table[256];
+#ifndef OPT_NATIVE_LATIN_1
+extern unsigned char char_from_native_table[256];
+extern unsigned char char_to_native_table[256];
+#endif /* OPT_NATIVE_LATIN_1 */
 
 extern int pref_printversion;
 extern int pref_screenwidth;
@@ -173,6 +182,7 @@ extern int pref_precise_timing;
 /* Declarations of library internal functions. */
 
 extern void gli_initialize_misc(void);
+extern char *gli_ascii_equivalent(unsigned char ch);
 
 extern void gli_msgline_warning(char *msg);
 extern void gli_msgline(char *msg);
@@ -185,10 +195,12 @@ extern void gli_initialize_events(void);
 extern void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2);
 extern void gli_set_halfdelay(void);
 
-extern void input_handle_key(int key);
+extern void gli_input_handle_key(int key);
+extern void gli_input_guess_focus(void);
 
 extern void gli_initialize_windows(void);
 extern void gli_setup_curses(void);
+extern void gli_fast_exit(void);
 extern window_t *gli_new_window(glui32 type, glui32 rock);
 extern void gli_delete_window(window_t *win);
 extern window_t *gli_window_iterate_treeorder(window_t *win);
@@ -198,12 +210,14 @@ extern void gli_windows_redraw(void);
 extern void gli_windows_update(void);
 extern void gli_windows_size_change(void);
 extern void gli_windows_place_cursor(void);
+extern void gli_windows_set_paging(int forcetoend);
+extern void gli_windows_trim_buffers(void);
 extern void gli_window_put_char(window_t *win, char ch);
 extern void gli_windows_unechostream(stream_t *str);
 extern void gli_print_spaces(int len);
 
-extern void gcmd_win_change_focus(window_t *win, int arg);
-extern void gcmd_win_refresh(window_t *win, int arg);
+extern void gcmd_win_change_focus(window_t *win, glui32 arg);
+extern void gcmd_win_refresh(window_t *win, glui32 arg);
 
 extern stream_t *gli_new_stream(int type, int readable, int writable, 
     glui32 rock);

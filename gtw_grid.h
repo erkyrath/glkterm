@@ -46,8 +46,8 @@ extern void win_textgrid_place_cursor(window_t *win, int *xpos, int *ypos);
 extern void win_textgrid_init_line(window_t *win, char *buf, int maxlen, int initlen);
 extern void win_textgrid_cancel_line(window_t *win, event_t *ev);
 
-extern void gcmd_grid_accept_key(window_t *win, int arg);
-extern void gcmd_grid_accept_line(window_t *win, int arg);
-extern void gcmd_grid_insert_key(window_t *win, int arg);
-extern void gcmd_grid_delete(window_t *win, int arg);
-extern void gcmd_grid_move_cursor(window_t *win, int arg);
+extern void gcmd_grid_accept_key(window_t *win, glui32 arg);
+extern void gcmd_grid_accept_line(window_t *win, glui32 arg);
+extern void gcmd_grid_insert_key(window_t *win, glui32 arg);
+extern void gcmd_grid_delete(window_t *win, glui32 arg);
+extern void gcmd_grid_move_cursor(window_t *win, glui32 arg);

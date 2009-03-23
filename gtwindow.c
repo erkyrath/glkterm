@@ -43,12 +43,13 @@ static void compute_content_box(void);
 #ifdef OPT_USE_SIGNALS
 
     int just_resumed;
-    static void sigresume(int val);
-    static void siginterrupt(int val);
+    int just_killed;
+    static void gli_sig_resume(int val);
+    static void gli_sig_interrupt(int val);
 
 #ifdef OPT_WINCHANGED_SIGNAL
         int screen_size_changed;
-        static void sigwinsize(int val);
+        static void gli_sig_winsize(int val);
 #endif /* OPT_WINCHANGED_SIGNAL */
 
 #endif /* OPT_USE_SIGNALS */
@@ -88,13 +89,14 @@ void gli_initialize_windows()
 #ifdef OPT_USE_SIGNALS
 
         just_resumed = FALSE;
-        signal(SIGCONT, &sigresume);
-        signal(SIGHUP, &siginterrupt);
-        signal(SIGINT, &siginterrupt);
+        just_killed = FALSE;
+        signal(SIGCONT, &gli_sig_resume);
+        signal(SIGHUP, &gli_sig_interrupt);
+        signal(SIGINT, &gli_sig_interrupt);
 
 #ifdef OPT_WINCHANGED_SIGNAL
             screen_size_changed = FALSE;
-            signal(SIGWINCH, &sigwinsize);
+            signal(SIGWINCH, &gli_sig_winsize);
 #endif /* OPT_WINCHANGED_SIGNAL */
 
 #endif /* OPT_USE_SIGNALS */
@@ -120,30 +122,22 @@ void gli_setup_curses()
 #ifdef OPT_USE_SIGNALS
 
 /* Signal handler for SIGCONT. */
-static void sigresume(int val)
+static void gli_sig_resume(int val)
 {
-    signal(SIGCONT, &sigresume);
+    signal(SIGCONT, &gli_sig_resume);
     just_resumed = TRUE;
-    gli_set_halfdelay();
 }
 
 /* Signal handler for SIGINT. */
-static void siginterrupt(int val)
+static void gli_sig_interrupt(int val)
 {
-    /* I don't know if re-entrancy is a problem, but we might as
-        well avoid it. */
-    void (*func)(void) = gli_interrupt_handler;
-    gli_interrupt_handler = NULL;
-
-    if (func) {
-        (*func)();
-    }
+    just_killed = TRUE;
 }
 
 #ifdef OPT_WINCHANGED_SIGNAL
 
 /* Signal handler for SIGWINCH. */
-static void sigwinsize(int val)
+static void gli_sig_winsize(int val)
 {
     endwin();
 
@@ -152,12 +146,27 @@ static void sigwinsize(int val)
     gli_set_halfdelay();
 
     screen_size_changed = TRUE;
-    signal(SIGWINCH, &sigwinsize);
+    signal(SIGWINCH, &gli_sig_winsize);
 }
 
 #endif /* OPT_WINCHANGED_SIGNAL */
 
 #endif /* OPT_USE_SIGNALS */
+
+/* Get out fast. This is used by the ctrl-C interrupt handler, under Unix. 
+    It doesn't pause and wait for a keypress, and it calls the Glk interrupt
+    handler. Otherwise it's the same as glk_exit(). */
+void gli_fast_exit()
+{
+    if (gli_interrupt_handler) {
+        (*gli_interrupt_handler)();
+    }
+
+    gli_streams_close_all();
+    endwin();
+    putchar('\n');
+    exit(0);
+}
 
 static void compute_content_box()
 {
@@ -964,6 +973,32 @@ void gli_windows_place_cursor()
     }
 }
 
+void gli_windows_set_paging(int forcetoend)
+{
+    window_t *win;
+    
+    for (win=gli_windowlist; win; win=win->next) {
+        switch (win->type) {
+            case wintype_TextBuffer:
+                win_textbuffer_set_paging(win, forcetoend);
+                break;
+        }
+    }
+}
+
+void gli_windows_trim_buffers()
+{
+    window_t *win;
+    
+    for (win=gli_windowlist; win; win=win->next) {
+        switch (win->type) {
+            case wintype_TextBuffer:
+                win_textbuffer_trim_buffer(win);
+                break;
+        }
+    }
+}
+
 void glk_request_char_event(winid_t id)
 {
     window_t *win;
@@ -1104,8 +1139,26 @@ void glk_cancel_mouse_event(winid_t id)
 
 void gli_window_put_char(window_t *win, char ch)
 {
-    /* ### character set conversion will go here. */
+    /* Character set conversion is necessary here, since we're printing to
+        native (curses.h) output routines. */
     
+    if (!char_printable_table[(unsigned char)ch]) {
+        char *altstr = gli_ascii_equivalent(ch);
+        /* altstr is now a sensible ASCII equivalent, or else an octal
+            code like "\177". Call gli_window_put_char() recursively to
+            print it. This is safe, if funky, because altstr contains
+            only characters in the range 0x20..0x7E. */
+        while (*altstr) {
+            gli_window_put_char(win, *altstr);
+            altstr++;
+        }
+        return;
+    }
+    
+#ifndef OPT_NATIVE_LATIN_1  
+    ch = char_to_native_table[(unsigned char)ch];
+#endif /* OPT_NATIVE_LATIN_1 */
+
     switch (win->type) {
         case wintype_TextBuffer:
             win_textbuffer_putchar(win, ch);
@@ -1173,7 +1226,7 @@ void gli_print_spaces(int len)
 
 /* Keybinding functions. */
 
-void gcmd_win_change_focus(window_t *win, int arg)
+void gcmd_win_change_focus(window_t *win, glui32 arg)
 {
     win = gli_window_iterate_treeorder(gli_focuswin);
     while (win == NULL || win->type == wintype_Pair) {
@@ -1185,7 +1238,7 @@ void gcmd_win_change_focus(window_t *win, int arg)
     gli_focuswin = win;
 }
 
-void gcmd_win_refresh(window_t *win, int arg)
+void gcmd_win_refresh(window_t *win, glui32 arg)
 {
     clear();
     gli_windows_redraw();

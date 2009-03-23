@@ -1,6 +1,6 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.2 alpha.
+GlkTerm Library: version 0.5.
 Glk API which this implements: version 0.4.
 Designed by Andrew Plotkin <erkyrath@netcom.com>
 http://www.edoc.com/zarf/glk/index.html
@@ -124,6 +124,20 @@ I said.
 
 Thanks to Matt Kimball for finding information on SIGWINCH and the
 curses library.
+
+* Bugs and Feature-Lacks
+
+During glk_exit(), the "hit any key to exit" prompt doesn't do paging.
+(That is, if a game prints a lot of text and then exits, the player will
+only see the last page.) This should be fixed.
+
+Could accept style hints, to the limited extent allowed by curses.h.
+Indentation, centering, bold, and underline/italics are all possible.
+
+Could display some visible indication of paging, in windows which need
+to page.
+
+When closing windows, + signs can be left in the window borders.
 
 * Permissions
 

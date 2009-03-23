@@ -400,6 +400,9 @@ static void gli_put_char(stream_t *str, unsigned char ch)
                 gli_put_char(str->win->echostr, ch);
             break;
         case strtype_File:
+            /* Really, if the stream was opened in text mode, we ought to do 
+                character-set conversion here. As it is we're printing a
+                file of Latin-1 characters. */
             putc(ch, str->file);
             break;
     }
@@ -448,6 +451,9 @@ static void gli_put_buffer(stream_t *str, char *buf, glui32 len)
                 gli_put_buffer(str->win->echostr, buf, len);
             break;
         case strtype_File:
+            /* Really, if the stream was opened in text mode, we ought to do 
+                character-set conversion here. As it is we're printing a
+                file of Latin-1 characters. */
             fwrite((unsigned char *)buf, 1, len, str->file);
             break;
     }
@@ -500,6 +506,8 @@ static glui32 gli_get_char(stream_t *str)
             res = getc(str->file);
             if (res != -1) {
                 str->readcount++;
+                /* Really, if the stream was opened in text mode, we ought
+                    to do character-set conversion here. */
                 return (glui32)res;
             }
             else {
@@ -543,6 +551,8 @@ static glui32 gli_get_buffer(stream_t *str, char *buf, glui32 len)
         case strtype_File: {
             glui32 res;
             res = fread(buf, 1, len, str->file);
+            /* Really, if the stream was opened in text mode, we ought
+                to do character-set conversion here. */
             str->readcount += res;
             return res;
             }
@@ -589,6 +599,8 @@ static glui32 gli_get_line(stream_t *str, char *buf, glui32 len)
         case strtype_File: {
             char *res;
             res = fgets(buf, len, str->file);
+            /* Really, if the stream was opened in text mode, we ought
+                to do character-set conversion here. */
             if (!res)
                 return 0;
             else

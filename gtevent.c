@@ -52,10 +52,14 @@ void glk_select(event_t *event)
     gli_event_clearevent(curevent);
     
     gli_windows_update();
+    gli_windows_set_paging(FALSE);
+    gli_input_guess_focus();
     
     while (curevent->type == evtype_None) {
         int key;
     
+        /* It would be nice to display a "hit any key to continue" message in
+            all windows which require it. */
         if (needrefresh) {
             gli_windows_place_cursor();
             refresh();
@@ -63,9 +67,17 @@ void glk_select(event_t *event)
         }
         key = getch();
         
+#ifdef OPT_USE_SIGNALS
+        if (just_killed) {
+            /* Someone hit ctrl-C. This flag is set by the
+                SIGINT / SIGHUP signal handlers.*/
+            gli_fast_exit();
+        }
+#endif /* OPT_USE_SIGNALS */
+        
         if (key != ERR) {
             /* An actual key has been hit */
-            input_handle_key(key);
+            gli_input_handle_key(key);
             needrefresh = TRUE;
             continue;
         }
@@ -78,6 +90,7 @@ void glk_select(event_t *event)
             flag is set by the SIGCONT signal handler. */
         if (just_resumed) {
             just_resumed = FALSE;
+            gli_set_halfdelay();
             needrefresh = TRUE;
             continue;
         }
@@ -115,6 +128,7 @@ void glk_select(event_t *event)
     }
     
     /* An event has occurred; glk_select() is over. */
+    gli_windows_trim_buffers();
     curevent = NULL;
 }
 

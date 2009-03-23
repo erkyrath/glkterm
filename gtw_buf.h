@@ -72,6 +72,7 @@ typedef struct window_textbuffer_struct {
 
     long scrollline;
     long scrollpos;
+    long lastseenline;
     
     /* for line input */
     char *inbuf;
@@ -91,14 +92,16 @@ extern void win_textbuffer_redraw(window_t *win);
 extern void win_textbuffer_update(window_t *win);
 extern void win_textbuffer_putchar(window_t *win, char ch);
 extern void win_textbuffer_clear(window_t *win);
+extern void win_textbuffer_trim_buffer(window_t *win);
 extern void win_textbuffer_place_cursor(window_t *win, int *xpos, int *ypos);
+extern void win_textbuffer_set_paging(window_t *win, int forcetoend);
 extern void win_textbuffer_init_line(window_t *win, char *buf, int maxlen, int initlen);
 extern void win_textbuffer_cancel_line(window_t *win, event_t *ev);
 
-extern void gcmd_buffer_accept_key(window_t *win, int arg);
-extern void gcmd_buffer_accept_line(window_t *win, int arg);
-extern void gcmd_buffer_insert_key(window_t *win, int arg);
-extern void gcmd_buffer_move_cursor(window_t *win, int arg);
-extern void gcmd_buffer_delete(window_t *win, int arg);
-extern void gcmd_buffer_scroll(window_t *win, int arg);
+extern void gcmd_buffer_accept_key(window_t *win, glui32 arg);
+extern void gcmd_buffer_accept_line(window_t *win, glui32 arg);
+extern void gcmd_buffer_insert_key(window_t *win, glui32 arg);
+extern void gcmd_buffer_move_cursor(window_t *win, glui32 arg);
+extern void gcmd_buffer_delete(window_t *win, glui32 arg);
+extern void gcmd_buffer_scroll(window_t *win, glui32 arg);
 

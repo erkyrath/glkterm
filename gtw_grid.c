@@ -194,12 +194,15 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
         
         ix=ln->dirtybeg;
         while (ix<ln->dirtyend) {
+            unsigned char *ucx;
             beg = ix;
             curattr = ln->attrs[beg];
             for (ix++; ix<ln->dirtyend && ln->attrs[ix] == curattr; ix++) { }
             attrset(win_textgrid_styleattrs[curattr]);
+            ucx = (unsigned char *)ln->chars; /* unsigned, so that addch() doesn't
+                get fed any high style bits. */
             for (iix=beg; iix<ix; iix++) {
-                addch(ln->chars[iix]);
+                addch(ucx[iix]);
             }
         }
         
@@ -407,14 +410,14 @@ void win_textgrid_cancel_line(window_t *win, event_t *ev)
 /* Keybinding functions. */
 
 /* Any key, during character input. Ends character input. */
-void gcmd_grid_accept_key(window_t *win, int arg)
+void gcmd_grid_accept_key(window_t *win, glui32 arg)
 {
     win->char_request = FALSE; 
     gli_event_store(evtype_CharInput, win, arg, 0);
 }
 
 /* Return or enter, during line input. Ends line input. */
-void gcmd_grid_accept_line(window_t *win, int arg)
+void gcmd_grid_accept_line(window_t *win, glui32 arg)
 {
     int ix;
     window_textgrid_t *dwin = win->data;
@@ -441,7 +444,7 @@ void gcmd_grid_accept_line(window_t *win, int arg)
 }
 
 /* Any regular key, during line input. */
-void gcmd_grid_insert_key(window_t *win, int arg)
+void gcmd_grid_insert_key(window_t *win, glui32 arg)
 {
     int ix;
     window_textgrid_t *dwin = win->data;
@@ -450,6 +453,9 @@ void gcmd_grid_insert_key(window_t *win, int arg)
     if (!dwin->inbuf)
         return;
     if (dwin->inlen >= dwin->inmax)
+        return;
+    
+    if (arg > 0xFF)
         return;
     
     for (ix=dwin->inlen; ix>dwin->incurs; ix--) 
@@ -471,7 +477,7 @@ void gcmd_grid_insert_key(window_t *win, int arg)
 }
 
 /* Delete keys, during line input. */
-void gcmd_grid_delete(window_t *win, int arg)
+void gcmd_grid_delete(window_t *win, glui32 arg)
 {
     int ix;
     window_textgrid_t *dwin = win->data;
@@ -531,7 +537,7 @@ void gcmd_grid_delete(window_t *win, int arg)
 }
 
 /* Cursor movement keys, during line input. */
-void gcmd_grid_move_cursor(window_t *win, int arg)
+void gcmd_grid_move_cursor(window_t *win, glui32 arg)
 {
     window_textgrid_t *dwin = win->data;
     tgline_t *ln = &(dwin->lines[dwin->inorgy]);

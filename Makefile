@@ -22,10 +22,15 @@ GLKTERM_HEADERS = \
   glkterm.h gtoption.h gtw_blnk.h gtw_buf.h \
   gtw_grid.h gtw_pair.h
 
+all: model multiwin
+
 model: $(GLKTERM_OBJS)
 	$(CC) -o model model.c $(GLKTERM_OBJS) $(LIBDIRS) $(LIBS)
+
+multiwin: $(GLKTERM_OBJS)
+	$(CC) -o multiwin multiwin.c $(GLKTERM_OBJS) $(LIBDIRS) $(LIBS)
 
 $(GLKTERM_OBJS): glk.h $(GLKTERM_HEADERS)
 
 clean:
-	\rm -f *~ *.o model
+	\rm -f *~ *.o model multiwin

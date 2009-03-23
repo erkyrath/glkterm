@@ -43,6 +43,9 @@ int gli_msgin_getchar(char *prompt, int hilite)
 {
     int orgx, orgy;
     int key;
+
+    gli_windows_update();
+    gli_windows_set_paging(TRUE);
     
     if (!prompt)
         prompt = "";
@@ -97,6 +100,9 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
     inline_t *lin = &indata;
     int needrefresh;
     
+    gli_windows_update();
+    gli_windows_set_paging(TRUE);
+
     if (!prompt)
         prompt = "";
     
@@ -111,8 +117,6 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
     
     lin->orgx = LEFT_MARGIN + strlen(prompt);
     
-    gli_windows_update();
-
     /* See note in gli_msgin_getchar(). */
     if (pref_messageline) {
         lin->orgy = content_box.bottom;
@@ -177,20 +181,6 @@ static void update_text(inline_t *lin)
 static void handle_key(inline_t *lin, int key)
 {
     char *buf = lin->buf; /* cache */
-    
-    if (key >= 32 && key < 256) {
-        if (lin->len < lin->maxlen) {
-            if (lin->curs < lin->len) {
-                memmove(buf+(lin->curs+1), buf+(lin->curs), 
-                    (lin->len - lin->curs) * sizeof(char));
-            }
-            lin->len++;
-            buf[lin->curs] = key;
-            lin->curs++;
-            update_text(lin);
-        }
-        return;
-    }
     
     switch (key) {
     
@@ -275,6 +265,22 @@ static void handle_key(inline_t *lin, int key)
                 update_text(lin);
             }
             break;
-            
+        
+        default: /* everything else */
+            if (key >= 32 && key < 256) {
+                if (lin->len < lin->maxlen) {
+                    if (lin->curs < lin->len) {
+                        memmove(buf+(lin->curs+1), buf+(lin->curs), 
+                            (lin->len - lin->curs) * sizeof(char));
+                    }
+                    lin->len++;
+                    buf[lin->curs] = key;
+                    lin->curs++;
+                    update_text(lin);
+                }
+                break;
+            }
+            break;
+    
     }
 }

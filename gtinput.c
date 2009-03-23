@@ -14,7 +14,7 @@
 #include "gtw_grid.h"
 #include "gtw_buf.h"
 
-typedef void (*command_fptr)(window_t *win, int);
+typedef void (*command_fptr)(window_t *win, glui32);
 
 typedef struct command_struct {
     command_fptr func;
@@ -57,11 +57,9 @@ static command_t *commands_textgrid(int key)
 /* Keys for char input in a text grid window. */
 static command_t *commands_textgrid_char(int key)
 {
-    if (key >= 32 && key < 256) {
-        static command_t cmdv = { gcmd_grid_accept_key, -1 };
-        return &cmdv;
-    }
-    return NULL;
+    static command_t cmdv = { gcmd_grid_accept_key, -1 };
+
+    return &cmdv;
 }
 
 /* Keys for line input in a text grid window. */
@@ -112,7 +110,10 @@ static command_t *commands_textgrid_line(int key)
     return NULL;
 }
 
-/* Keys which are always meaningful in a text buffer window. */
+/* Keys which are always meaningful in a text buffer window. Note that
+    these override character input, which means you can never type ctrl-Y
+    or ctrl-V in a textbuffer, even though you can in a textgrid. The Glk
+    API doesn't make this distinction. Damn. */
 static command_t *commands_textbuffer(int key)
 {
     static command_t cmdscrolltotop = { gcmd_buffer_scroll, gcmd_UpEnd };
@@ -130,10 +131,8 @@ static command_t *commands_textbuffer(int key)
         case '\016': /* ctrl-N */
             return &cmdscrolldownline;
         case KEY_HOME:
-        case '\001': /* ctrl-A */
             return &cmdscrolltotop;
         case KEY_END:
-        case '\005': /* ctrl-E */
             return &cmdscrolltobottom;
         case KEY_PPAGE:
         case '\031': /* ctrl-Y */
@@ -145,14 +144,20 @@ static command_t *commands_textbuffer(int key)
     return NULL;
 }
 
+/* Keys for "hit any key to page" mode. */
+static command_t *commands_textbuffer_paging(int key)
+{
+    static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
+
+    return &cmdscrolldownpage;
+}
+
 /* Keys for char input in a text buffer window. */
 static command_t *commands_textbuffer_char(int key)
 {
-    if (key >= 32 && key < 256) {
-        static command_t cmdv = { gcmd_buffer_accept_key, -1 };
-        return &cmdv;
-    }
-    return NULL;
+    static command_t cmdv = { gcmd_buffer_accept_key, -1 };
+
+    return &cmdv;
 }
 
 /* Keys for line input in a text buffer window. */
@@ -169,7 +174,7 @@ static command_t *commands_textbuffer_line(int key)
     static command_t cmdkillinput = { gcmd_buffer_delete, gcmd_KillInput };
     static command_t cmdkillline = { gcmd_buffer_delete, gcmd_KillLine };
 
-    if (key >= 32 && key < 256 && key != 127) 
+    if (key >= 32 && key < 256 && key != '\177') 
         return &cmdinsert;
     switch (key) {
         case KEY_ENTER:
@@ -212,20 +217,29 @@ static command_t *commands_window(window_t *win, int key)
     
     switch (win->type) {
         case wintype_TextGrid:
-            if (win->line_request)
-                cmd = commands_textgrid_line(key);
-            else if (win->char_request)
-                cmd = commands_textgrid_char(key);
-            if (!cmd)
-                cmd = commands_textgrid(key);
+            cmd = commands_textgrid(key);
+            if (!cmd) {
+                if (win->line_request)
+                    cmd = commands_textgrid_line(key);
+                else if (win->char_request)
+                    cmd = commands_textgrid_char(key);
+            }
             break;
-        case wintype_TextBuffer:
-            if (win->line_request)
-                cmd = commands_textbuffer_line(key);
-            else if (win->char_request)
-                cmd = commands_textbuffer_char(key);
-            if (!cmd)
-                cmd = commands_textbuffer(key);
+        case wintype_TextBuffer: {
+            window_textbuffer_t *dwin = win->data;
+            cmd = commands_textbuffer(key);
+            if (!cmd) {
+                if (dwin->lastseenline < dwin->numlines - dwin->height) {
+                    cmd = commands_textbuffer_paging(key);
+                }
+                if (!cmd) {
+                    if (win->line_request)
+                        cmd = commands_textbuffer_line(key);
+                    else if (win->char_request)
+                        cmd = commands_textbuffer_char(key);
+                }
+            }
+            }
             break;
     }
     
@@ -290,25 +304,25 @@ static char *key_to_name(int key)
 
 /* Handle a keystroke. This is called from glk_select() whenever a
     key is hit. */
-void input_handle_key(int key)
+void gli_input_handle_key(int key)
 {
     command_t *cmd = NULL;
     window_t *win = NULL;
     
-    /* First, see if the key is bound in the focus window. */
-    if (gli_focuswin) {
-        cmd = commands_window(gli_focuswin, key);
-        if (cmd)
-            win = gli_focuswin;
-    }
-    
-    /* If not, see if it has a general binding. */
+    /* First, see if the key has a general binding. */
     if (!cmd) {
         cmd = commands_always(key);
         if (cmd)
             win = NULL;
     }
 
+    /* If not, see if the key is bound in the focus window. */
+    if (!cmd && gli_focuswin) {
+        cmd = commands_window(gli_focuswin, key);
+        if (cmd)
+            win = gli_focuswin;
+    }
+    
     /* If not, see if there's some other window which has a binding for
         the key; if so, set the focus there. */
     if (!cmd && gli_rootwin) {
@@ -331,11 +345,70 @@ void input_handle_key(int key)
     
     if (cmd) {
         /* We found a binding. Run it. */
-        int arg;
-        if (cmd->arg == -1)
-            arg = key;
-        else
+        glui32 arg;
+        if (cmd->arg == -1) {
+            /* convert from curses.h key codes to Glk, if necessary. */
+            switch (key) {
+                case '\t': 
+                    arg = keycode_Tab;
+                    break;
+                case '\033':
+                    arg = keycode_Escape;
+                    break;
+                case KEY_DOWN:
+                    arg = keycode_Down;
+                    break;
+                case KEY_UP:
+                    arg = keycode_Up;
+                    break;
+                case KEY_LEFT:
+                    arg = keycode_Left;
+                    break;
+                case KEY_RIGHT:
+                    arg = keycode_Right;
+                    break;
+                case KEY_HOME:
+                    arg = keycode_Home;
+                    break;
+                case '\177': /* delete */
+                case '\010': /* backspace */
+                case KEY_BACKSPACE:
+                case KEY_DC:
+                    arg = keycode_Delete;
+                    break;
+                case KEY_NPAGE:
+                    arg = keycode_PageDown;
+                    break;
+                case KEY_PPAGE:
+                    arg = keycode_PageUp;
+                    break;
+                case KEY_ENTER:
+                case '\012': /* ctrl-J */
+                case '\015': /* ctrl-M */
+                    arg = keycode_Return;
+                    break;
+                case KEY_END:
+                    arg = keycode_End;
+                    break;
+                default:
+                    if (key < 0 || key >= 256) {
+                        arg = keycode_Unknown;
+                    }
+                    else {
+#ifdef OPT_NATIVE_LATIN_1
+                        arg = key;
+#else /* OPT_NATIVE_LATIN_1 */
+                        arg = char_from_native_table[key];
+                        if (!arg && key != '\0')
+                            arg = keycode_Unknown;
+#endif /* OPT_NATIVE_LATIN_1 */
+                    }
+                    break;
+            }
+        }
+        else {
             arg = cmd->arg;
+        }
         (*cmd->func)(win, arg);
     }
     else {
@@ -345,3 +418,28 @@ void input_handle_key(int key)
         gli_msgline(buf);
     }
 }
+
+/* Pick a window which might want input. This is called at the beginning
+    of glk_select(). */
+void gli_input_guess_focus()
+{
+    window_t *altwin;
+    
+    if (gli_focuswin 
+        && (gli_focuswin->line_request || gli_focuswin->char_request)) {
+        return;
+    }
+    
+    altwin = gli_focuswin;
+    do {
+        altwin = gli_window_iterate_treeorder(altwin);
+        if (altwin 
+            && (altwin->line_request || altwin->char_request)) {
+            break;
+        }
+    } while (altwin != gli_focuswin);
+    
+    if (gli_focuswin != altwin)
+        gli_focuswin = altwin;
+}
+

@@ -1,6 +1,6 @@
 /* main.c: Top-level source file
         for GlkTerm, curses.h implementation of the Glk API.
-    GlkTerm Library: version 0.2 alpha.
+    GlkTerm Library: version 0.5.
     Glk API which this implements: version 0.4.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.edoc.com/zarf/glk/index.html
