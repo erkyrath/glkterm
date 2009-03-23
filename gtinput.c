@@ -1,0 +1,347 @@
+/* gtinput.c: Key input handling
+        for GlkTerm, curses.h implementation of the Glk API.
+    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    http://www.edoc.com/zarf/glk/index.html
+*/
+
+#include "gtoption.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <curses.h>
+#include "glk.h"
+#include "glkterm.h"
+#include "gtw_grid.h"
+#include "gtw_buf.h"
+
+typedef void (*command_fptr)(window_t *win, int);
+
+typedef struct command_struct {
+    command_fptr func;
+    int arg;
+} command_t;
+
+/* The idea is that, depending on what kind of window has focus and
+    whether it is set for line or character input, various keys are
+    bound to various command_t objects. A command_t contains a function
+    to call to handle the key, and an argument. (This allows one
+    function to handle several variants of a command -- for example,
+    gcmd_buffer_scroll() handles scrolling both up and down.) If the
+    argument is -1, the function will be passed the actual key hit.
+    (This allows a single function to handle a range of keys.) 
+   Key values may be 0 to 255, or any of the special KEY_* values
+    defined in curses.h. */
+
+/* Keys which are always meaningful. */
+static command_t *commands_always(int key)
+{
+    static command_t cmdchangefocus = { gcmd_win_change_focus, 0 };
+    static command_t cmdrefresh = { gcmd_win_refresh, 0 };
+
+    switch (key) {
+        case '\t': 
+            return &cmdchangefocus;
+        case '\014': /* ctrl-L */
+            return &cmdrefresh;
+    }
+    
+    return NULL;
+}
+
+/* Keys which are always meaningful in a text grid window. */
+static command_t *commands_textgrid(int key)
+{
+    return NULL;
+}
+
+/* Keys for char input in a text grid window. */
+static command_t *commands_textgrid_char(int key)
+{
+    if (key >= 32 && key < 256) {
+        static command_t cmdv = { gcmd_grid_accept_key, -1 };
+        return &cmdv;
+    }
+    return NULL;
+}
+
+/* Keys for line input in a text grid window. */
+static command_t *commands_textgrid_line(int key)
+{
+    static command_t cmdacceptline = { gcmd_grid_accept_line, 0 };
+    static command_t cmdinsert = { gcmd_grid_insert_key, -1 };
+    static command_t cmdmoveleft = { gcmd_grid_move_cursor, gcmd_Left };
+    static command_t cmdmoveright = { gcmd_grid_move_cursor, gcmd_Right };
+    static command_t cmdmoveleftend = { gcmd_grid_move_cursor, gcmd_LeftEnd };
+    static command_t cmdmoverightend = { gcmd_grid_move_cursor, gcmd_RightEnd };
+    static command_t cmddelete = { gcmd_grid_delete, gcmd_Delete };
+    static command_t cmddeletenext = { gcmd_grid_delete, gcmd_DeleteNext };
+    static command_t cmdkillinput = { gcmd_grid_delete, gcmd_KillInput };
+    static command_t cmdkillline = { gcmd_grid_delete, gcmd_KillLine };
+
+    if (key >= 32 && key < 256 && key != 127) 
+        return &cmdinsert;
+    switch (key) {
+        case KEY_ENTER:
+        case '\012': /* ctrl-J */
+        case '\015': /* ctrl-M */
+            return &cmdacceptline;
+        case KEY_LEFT:
+        case '\002': /* ctrl-B */
+            return &cmdmoveleft;
+        case KEY_RIGHT:
+        case '\006': /* ctrl-F */
+            return &cmdmoveright;
+        case KEY_HOME:
+        case '\001': /* ctrl-A */
+            return &cmdmoveleftend;
+        case KEY_END:
+        case '\005': /* ctrl-E */
+            return &cmdmoverightend;
+        case '\177': /* delete */
+        case '\010': /* backspace */
+        case KEY_BACKSPACE:
+        case KEY_DC:
+            return &cmddelete;
+        case '\004': /* ctrl-D */
+            return &cmddeletenext;
+        case '\013': /* ctrl-K */
+            return &cmdkillline;
+        case '\025': /* ctrl-U */
+            return &cmdkillinput;
+    }
+    return NULL;
+}
+
+/* Keys which are always meaningful in a text buffer window. */
+static command_t *commands_textbuffer(int key)
+{
+    static command_t cmdscrolltotop = { gcmd_buffer_scroll, gcmd_UpEnd };
+    static command_t cmdscrolltobottom = { gcmd_buffer_scroll, gcmd_DownEnd };
+    static command_t cmdscrollupline = { gcmd_buffer_scroll, gcmd_Up };
+    static command_t cmdscrolldownline = { gcmd_buffer_scroll, gcmd_Down };
+    static command_t cmdscrolluppage = { gcmd_buffer_scroll, gcmd_UpPage };
+    static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
+
+    switch (key) {
+        case KEY_UP:
+        case '\020': /* ctrl-P */
+            return &cmdscrollupline;
+        case KEY_DOWN:
+        case '\016': /* ctrl-N */
+            return &cmdscrolldownline;
+        case KEY_HOME:
+        case '\001': /* ctrl-A */
+            return &cmdscrolltotop;
+        case KEY_END:
+        case '\005': /* ctrl-E */
+            return &cmdscrolltobottom;
+        case KEY_PPAGE:
+        case '\031': /* ctrl-Y */
+            return &cmdscrolluppage;
+        case KEY_NPAGE:
+        case '\026': /* ctrl-V */
+            return &cmdscrolldownpage;
+    }
+    return NULL;
+}
+
+/* Keys for char input in a text buffer window. */
+static command_t *commands_textbuffer_char(int key)
+{
+    if (key >= 32 && key < 256) {
+        static command_t cmdv = { gcmd_buffer_accept_key, -1 };
+        return &cmdv;
+    }
+    return NULL;
+}
+
+/* Keys for line input in a text buffer window. */
+static command_t *commands_textbuffer_line(int key)
+{
+    static command_t cmdacceptline = { gcmd_buffer_accept_line, 0 };
+    static command_t cmdinsert = { gcmd_buffer_insert_key, -1 };
+    static command_t cmdmoveleft = { gcmd_buffer_move_cursor, gcmd_Left };
+    static command_t cmdmoveright = { gcmd_buffer_move_cursor, gcmd_Right };
+    static command_t cmdmoveleftend = { gcmd_buffer_move_cursor, gcmd_LeftEnd };
+    static command_t cmdmoverightend = { gcmd_buffer_move_cursor, gcmd_RightEnd };
+    static command_t cmddelete = { gcmd_buffer_delete, gcmd_Delete };
+    static command_t cmddeletenext = { gcmd_buffer_delete, gcmd_DeleteNext };
+    static command_t cmdkillinput = { gcmd_buffer_delete, gcmd_KillInput };
+    static command_t cmdkillline = { gcmd_buffer_delete, gcmd_KillLine };
+
+    if (key >= 32 && key < 256 && key != 127) 
+        return &cmdinsert;
+    switch (key) {
+        case KEY_ENTER:
+        case '\012': /* ctrl-J */
+        case '\015': /* ctrl-M */
+            return &cmdacceptline;
+        case KEY_LEFT:
+        case '\002': /* ctrl-B */
+            return &cmdmoveleft;
+        case KEY_RIGHT:
+        case '\006': /* ctrl-F */
+            return &cmdmoveright;
+        case KEY_HOME:
+        case '\001': /* ctrl-A */
+            return &cmdmoveleftend;
+        case KEY_END:
+        case '\005': /* ctrl-E */
+            return &cmdmoverightend;
+        case '\177': /* delete */
+        case '\010': /* backspace */
+        case KEY_BACKSPACE:
+        case KEY_DC:
+            return &cmddelete;
+        case '\004': /* ctrl-D */
+            return &cmddeletenext;
+        case '\013': /* ctrl-K */
+            return &cmdkillline;
+        case '\025': /* ctrl-U */
+            return &cmdkillinput;
+    }
+    return NULL;
+}
+
+/* Check to see if key is bound to anything in the given window.
+    First check for char or line input bindings, then general
+    bindings. */
+static command_t *commands_window(window_t *win, int key)
+{
+    command_t *cmd = NULL;
+    
+    switch (win->type) {
+        case wintype_TextGrid:
+            if (win->line_request)
+                cmd = commands_textgrid_line(key);
+            else if (win->char_request)
+                cmd = commands_textgrid_char(key);
+            if (!cmd)
+                cmd = commands_textgrid(key);
+            break;
+        case wintype_TextBuffer:
+            if (win->line_request)
+                cmd = commands_textbuffer_line(key);
+            else if (win->char_request)
+                cmd = commands_textbuffer_char(key);
+            if (!cmd)
+                cmd = commands_textbuffer(key);
+            break;
+    }
+    
+    return cmd;
+}
+
+/* Return a string describing a given key. This (sometimes) uses a
+    static buffer, which is overwritten with each call. */
+static char *key_to_name(int key)
+{
+    static char kbuf[32];
+    
+    if (key >= 32 && key < 256) {
+        if (key == 127) {
+            return "delete";
+        }
+        kbuf[0] = key;
+        kbuf[1] = '\0';
+        return kbuf;
+    }
+
+    switch (key) {
+        case '\t':
+            return "tab";
+        case '\033':
+            return "escape";
+        case KEY_DOWN:
+            return "down-arrow";
+        case KEY_UP:
+            return "up-arrow";
+        case KEY_LEFT:
+            return "left-arrow";
+        case KEY_RIGHT:
+            return "right-arrow";
+        case KEY_HOME:
+            return "home";
+        case KEY_BACKSPACE:
+            return "backspace";
+        case KEY_DC:
+            return "delete-char";
+        case KEY_IC:
+            return "insert-char";
+        case KEY_NPAGE:
+            return "page-down";
+        case KEY_PPAGE:
+            return "page-up";
+        case KEY_ENTER:
+            return "enter";
+        case KEY_END:
+            return "end";
+        case KEY_HELP:
+            return "help";
+    }
+
+    if (key >= 0 && key < 32) {
+        sprintf(kbuf, "ctrl-%c", '@'+key);
+        return kbuf;
+    }
+
+    return "unknown-key";
+}
+
+/* Handle a keystroke. This is called from glk_select() whenever a
+    key is hit. */
+void input_handle_key(int key)
+{
+    command_t *cmd = NULL;
+    window_t *win = NULL;
+    
+    /* First, see if the key is bound in the focus window. */
+    if (gli_focuswin) {
+        cmd = commands_window(gli_focuswin, key);
+        if (cmd)
+            win = gli_focuswin;
+    }
+    
+    /* If not, see if it has a general binding. */
+    if (!cmd) {
+        cmd = commands_always(key);
+        if (cmd)
+            win = NULL;
+    }
+
+    /* If not, see if there's some other window which has a binding for
+        the key; if so, set the focus there. */
+    if (!cmd && gli_rootwin) {
+        window_t *altwin = gli_focuswin;
+        command_t *altcmd = NULL;
+        do {
+            altwin = gli_window_iterate_treeorder(altwin);
+            if (altwin && altwin->type != wintype_Pair) {
+                altcmd = commands_window(altwin, key);
+                if (altcmd)
+                    break;
+            }
+        } while (altwin != gli_focuswin);
+        if (altwin != gli_focuswin && altcmd) {
+            cmd = altcmd;
+            win = altwin;
+            gli_focuswin = win; /* set the focus */
+        }
+    }
+    
+    if (cmd) {
+        /* We found a binding. Run it. */
+        int arg;
+        if (cmd->arg == -1)
+            arg = key;
+        else
+            arg = cmd->arg;
+        (*cmd->func)(win, arg);
+    }
+    else {
+        char buf[256];
+        char *kbuf = key_to_name(key);
+        sprintf(buf, "The key <%s> is not currently defined.", kbuf);
+        gli_msgline(buf);
+    }
+}
