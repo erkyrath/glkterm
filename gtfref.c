@@ -21,6 +21,12 @@
 /* Linked list of all filerefs */
 static fileref_t *gli_filereflist = NULL; 
 
+static char workingdir[256] = ".";
+static char lastsavename[256] = "game.sav";
+static char lastscriptname[256] = "script.txt";
+static char lastcmdname[256] = "commands.txt";
+static char lastdataname[256] = "file.dat";
+
 fileref_t *gli_new_fileref(char *filename, glui32 usage, glui32 rock)
 {
     fileref_t *fref = (fileref_t *)malloc(sizeof(fileref_t));
@@ -131,6 +137,7 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
 {
     fileref_t *fref;
     char buf[256];
+    char buf2[256];
     int len;
     char *cx;
     
@@ -165,7 +172,9 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
             *cx = '-';
     }
     
-    fref = gli_new_fileref(buf, usage, rock);
+    sprintf(buf2, "%s/%s", workingdir, buf);
+
+    fref = gli_new_fileref(buf2, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_by_name: unable to create fileref.");
         return NULL;
@@ -179,15 +188,10 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 {
     fileref_t *fref;
     struct stat sbuf;
-    char buf[256], prbuf[256];
+    char buf[256], prbuf[256], newbuf[256];
     char *cx;
     int ix, val;
     char *prompt, *prompt2, *lastbuf;
-    
-    static char lastsavename[256] = "save.gam";
-    static char lastscriptname[256] = "script.txt";
-    static char lastcmdname[256] = "commands.txt";
-    static char lastdataname[256] = "file.dat";
     
     switch (usage & fileusage_TypeMask) {
         case fileusage_SavedGame:
@@ -216,8 +220,14 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     
     sprintf(prbuf, "%s %s: ", prompt, prompt2);
     
-    strcpy(buf, lastbuf);
-    val = strlen(buf);
+    if (pref_prompt_defaults) {
+        strcpy(buf, lastbuf);
+        val = strlen(buf);
+    }
+    else {
+        buf[0] = 0;
+        val = 0;
+    }
     
     ix = gli_msgin_getline(prbuf, buf, 255, &val);
     if (!ix) {
@@ -241,9 +251,14 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         /* The player just hit return. */
         return NULL;
     }
+
+    if (cx[0] == '/')
+        strcpy(newbuf, cx);
+    else
+        sprintf(newbuf, "%s/%s", workingdir, cx);
     
     if (fmode != filemode_Read) {
-        if (!stat(cx, &sbuf) && S_ISREG(sbuf.st_mode)) {
+        if (!stat(newbuf, &sbuf) && S_ISREG(sbuf.st_mode)) {
             sprintf(prbuf, "Overwrite \"%s\"? [y/n] ", cx);
             while (1) {
                 ix = gli_msgin_getchar(prbuf, FALSE);
@@ -259,7 +274,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 
     strcpy(lastbuf, cx);
 
-    fref = gli_new_fileref(cx, usage, rock);
+    fref = gli_new_fileref(newbuf, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_by_prompt: unable to create fileref.");
         return NULL;
@@ -331,3 +346,39 @@ void glk_fileref_delete_file(fileref_t *fref)
         
     unlink(fref->filename);
 }
+
+/* This should only be called from startup code. */
+void glkunix_set_base_file(char *filename)
+{
+    char *cx;
+    int ix;
+  
+    for (ix=strlen(filename)-1; ix >= 0; ix--) 
+        if (filename[ix] == '/')
+	    break;
+
+    if (ix >= 0) {
+        /* There is a slash. */
+        strncpy(workingdir, filename, ix);
+	workingdir[ix] = '\0';
+	ix++;
+    }
+    else {
+        /* No slash, just a filename. */
+        ix = 0;
+    }
+
+    strcpy(lastsavename, filename+ix);
+    for (ix=strlen(lastsavename)-1; ix >= 0; ix--) 
+        if (lastsavename[ix] == '.') 
+	    break;
+    if (ix >= 0)
+        lastsavename[ix] = '\0';
+    strcpy(lastscriptname, lastsavename);
+    strcpy(lastdataname, lastsavename);
+    
+    strcat(lastsavename, ".sav");
+    strcat(lastscriptname, ".txt");
+    strcat(lastdataname, ".dat");
+}
+

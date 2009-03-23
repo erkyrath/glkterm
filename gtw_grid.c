@@ -126,6 +126,9 @@ void win_textgrid_rearrange(window_t *win, grect_t *box)
     
     dwin->width = newwid;
     dwin->height = newhgt;
+
+    dwin->dirtybeg = 0;
+    dwin->dirtyend = dwin->height;
 }
 
 static void init_lines(window_textgrid_t *dwin, int beg, int end, int linewid)

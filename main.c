@@ -1,6 +1,5 @@
 /* main.c: Top-level source file
         for GlkTerm, curses.h implementation of the Glk API.
-    GlkTerm Library: version 0.7.3.
     Glk API which this implements: version 0.52.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.eblong.com/zarf/glk/index.html
@@ -24,6 +23,7 @@ int pref_reverse_textgrids = FALSE;
 int pref_window_borders = TRUE;
 int pref_precise_timing = FALSE;
 int pref_historylen = 20;
+int pref_prompt_defaults = TRUE;
 
 /* Some constants for my wacky little command-line option parser. */
 #define ex_Void (0)
@@ -172,6 +172,8 @@ int main(int argc, char *argv[])
             pref_reverse_textgrids = val;
         else if (extract_value(argc, argv, "border", ex_Bool, &ix, &val, pref_window_borders))
             pref_window_borders = val;
+        else if (extract_value(argc, argv, "defprompt", ex_Bool, &ix, &val, pref_prompt_defaults))
+            pref_prompt_defaults = val;
 #ifdef OPT_TIMED_INPUT
         else if (extract_value(argc, argv, "precise", ex_Bool, &ix, &val, pref_precise_timing))
             pref_precise_timing = val;
@@ -200,6 +202,7 @@ int main(int argc, char *argv[])
         printf("  -historylen NUM: length of command history (default 20)\n");
         printf("  -revgrid BOOL: reverse text in grid (status) windows (default 'no')\n");
         printf("  -border BOOL: draw borders between windows (default 'yes')\n");
+        printf("  -defprompt BOOL: provide defaults for file prompts (default 'yes')\n");
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");
 #endif /* !OPT_TIMED_INPUT */

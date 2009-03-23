@@ -1,6 +1,6 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.3.
+GlkTerm Library: version 0.7.4.
 Glk API which this implements: version 0.5.2.
 Designed by Andrew Plotkin <erkyrath@netcom.com>
 http://www.eblong.com/zarf/glk/index.html
@@ -163,11 +163,20 @@ This opens an arbitrary file, in read-only mode. Note that this function
 is *only* available during glkunix_startup_code(). It is inherent
 non-portable; it should not and cannot be called from inside glk_main().
 
+void glkunix_set_base_file(char *filename);
+
+This sets the library's idea of the "current directory" for the executing
+program. The argument should be the name of a file (not a directory).
+When this is set, fileref_create_by_name() will create files in the same
+directory as that file, and create_by_prompt() will base default filenames
+off of the file. If this is not called, the library works in the Unix
+current working directory, and picks reasonable default defaults.
+
 * Operating systems and compatibility tests:
 
-On BSD-like systems, you may have to use ncurses instead of curses. This
-involves changing "#include <curses.h>" to "#include <ncurses.h>", and
-(in the Makefile) "-lcurses" to "-lncurses".
+I've given up on using original curses, where that's different from ncurses.
+Ncurses is now required. The Makefile links it explicitly. You may have
+to change "#include <curses.h>" to "#include <ncurses.h>".
 
 SunOS:
     Uncomment the lines in the Makefile:
@@ -191,7 +200,7 @@ AIX:
     See HPUX. (Reported for AIX 3.2.5).
     
 FreeBSD:
-    Use ncurses instead of curses.
+    Compiles as is.
 
 Unixware:
     In the Makefile, uncomment
@@ -254,6 +263,13 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+0.7.4:
+    Fixed bugs in window resizing.
+    Changed the default save game name to "game.sav".
+    Added "-defprompt" switch, to suppress default file names.
+    Added glkunix_set_base_file().
+    Changed Makefile to use ncurses instead of original curses.
 
 0.7.3:
     Added the ability to open a Blorb file, although the library never

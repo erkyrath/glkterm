@@ -108,11 +108,16 @@ void win_pair_rearrange(window_t *win, grect_t *box)
     else {
         split = min+split;
     }
-    
-    if (split < min)
+
+    if (min >= max) {
         split = min;
-    else if (split > max)
-        split = max;
+    }
+    else {
+      if (split < min)
+          split = min;
+      else if (split > max-splitwid)
+          split = max-splitwid;
+    }
 
     if (dwin->vertical) {
         dwin->splitpos = split;

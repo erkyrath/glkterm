@@ -3,7 +3,7 @@
 # This generates two files. One, of course, is libglkterm.a -- the library
 # itself. The other is Make.glkterm; this is a snippet of Makefile code
 # which locates the glkterm library and associated libraries (such as
-# curses.)
+# ncurses.)
 #
 # When you install glkterm, you must put libglkterm.a in the lib directory,
 # and glk.h, glkstart.h, and Make.glkterm in the include directory.
@@ -12,10 +12,10 @@
 #CC = cc
 CC = gcc -ansi
 
-# You may need to set directories to pick up the curses library.
+# You may need to set directories to pick up the ncurses library.
 #INCLUDEDIRS = -I/usr/5include
 #LIBDIRS = -L/usr/5lib 
-LIBS = -lcurses
+LIBS = -lncurses
 
 OPTIONS = -O
 
