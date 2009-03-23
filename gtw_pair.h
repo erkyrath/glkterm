@@ -1,7 +1,7 @@
 /* gtw_pair.h: The pair window header
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 typedef struct window_pair_struct {

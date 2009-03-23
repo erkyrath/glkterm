@@ -1,7 +1,7 @@
 /* gtstyle.c: Style formatting hints.
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -23,13 +23,12 @@ void glk_stylehint_clear(glui32 wintype, glui32 styl, glui32 hint)
 {
 }
 
-glui32 glk_style_distinguish(winid_t id, glui32 styl1, glui32 styl2)
+glui32 glk_style_distinguish(window_t *win, glui32 styl1, glui32 styl2)
 {
-    window_t *win;
     chtype *styleattrs;
 
-    if (!id || !(win = IDToWindow(id))) {
-        gli_strict_warning("style_distinguish: invalid id");
+    if (!win) {
+        gli_strict_warning("style_distinguish: invalid ref");
         return FALSE;
     }
     
@@ -55,15 +54,14 @@ glui32 glk_style_distinguish(winid_t id, glui32 styl1, glui32 styl2)
     return FALSE;
 }
 
-glui32 glk_style_measure(winid_t id, glui32 styl, glui32 hint, 
+glui32 glk_style_measure(window_t *win, glui32 styl, glui32 hint, 
     glui32 *result)
 {
-    window_t *win;
     chtype *styleattrs;
     glui32 dummy;
 
-    if (!id || !(win = IDToWindow(id))) {
-        gli_strict_warning("style_measure: invalid id");
+    if (!win) {
+        gli_strict_warning("style_measure: invalid ref");
         return FALSE;
     }
     

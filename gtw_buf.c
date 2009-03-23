@@ -1,7 +1,7 @@
 /* gtw_buf.c: The buffer window type
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -28,6 +28,7 @@ static void set_last_run(window_textbuffer_t *dwin, glui32 style);
 
 window_textbuffer_t *win_textbuffer_create(window_t *win)
 {
+    int ix;
     window_textbuffer_t *dwin = (window_textbuffer_t *)malloc(sizeof(window_textbuffer_t));
     dwin->owner = win;
     
@@ -57,6 +58,20 @@ window_textbuffer_t *win_textbuffer_create(window_t *win)
     dwin->runs[0].style = style_Normal;
     dwin->runs[0].pos = 0;
     
+    if (pref_historylen > 1) {
+        dwin->history = (char **)malloc(sizeof(char *) * pref_historylen);
+        if (!dwin->history)
+            return NULL;
+        for (ix=0; ix<pref_historylen; ix++)
+            dwin->history[ix] = NULL;
+    }
+    else {
+        dwin->history = NULL;
+    }
+    dwin->historypos = 0;
+    dwin->historyfirst = 0;
+    dwin->historypresent = 0;
+    
     dwin->dirtybeg = -1;
     dwin->dirtyend = -1;
     dwin->dirtydelta = -1;
@@ -73,6 +88,13 @@ window_textbuffer_t *win_textbuffer_create(window_t *win)
 
 void win_textbuffer_destroy(window_textbuffer_t *dwin)
 {
+    if (dwin->inbuf) {
+        if (gli_unregister_arr) {
+            (*gli_unregister_arr)(dwin->inbuf, dwin->inmax, "&+#!Cn", dwin->inarrayrock);
+        }
+        dwin->inbuf = NULL;
+    }
+    
     dwin->owner = NULL;
     
     if (dwin->tmplines) {
@@ -944,9 +966,14 @@ void win_textbuffer_init_line(window_t *win, char *buf, int maxlen,
     dwin->origstyle = win->style;
     win->style = style_Input;
     set_last_run(dwin, win->style);
+    dwin->historypos = dwin->historypresent;
     
     if (initlen) {
         put_text(dwin, buf, initlen, dwin->incurs, 0);
+    }
+
+    if (gli_register_arr) {
+        dwin->inarrayrock = (*gli_register_arr)(buf, maxlen, "&+#!Cn");
     }
 }
 
@@ -955,32 +982,44 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
 {
     int ix;
     long len;
+    char *inbuf;
+    int inmax;
+    gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
 
     if (!dwin->inbuf)
         return;
     
+    inbuf = dwin->inbuf;
+    inmax = dwin->inmax;
+    inarrayrock = dwin->inarrayrock;
+
     len = dwin->numchars - dwin->infence;
     if (win->echostr) 
         gli_stream_echo_line(win->echostr, &(dwin->chars[dwin->infence]), len);
 
-    if (len > dwin->inmax)
-        len = dwin->inmax;
+    if (len > inmax)
+        len = inmax;
         
     for (ix=0; ix<len; ix++)
-        dwin->inbuf[ix] = dwin->chars[dwin->infence+ix];
+        inbuf[ix] = dwin->chars[dwin->infence+ix];
         
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);
 
     ev->type = evtype_LineInput;
-    ev->win = WindowToID(win);
+    ev->win = win;
     ev->val1 = len;
     
     win->line_request = FALSE;
     dwin->inbuf = NULL;
+    dwin->inmax = 0;
 
     win_textbuffer_putchar(win, '\n');
+    
+    if (gli_unregister_arr) {
+        (*gli_unregister_arr)(inbuf, inmax, "&+#!Cn", inarrayrock);
+    }
 }
 
 /* Keybinding functions. */
@@ -997,20 +1036,54 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
 {
     int ix;
     long len;
+    char *cx;
+    char *inbuf;
+    int inmax;
+    gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
     
     if (!dwin->inbuf)
         return;
     
+    inbuf = dwin->inbuf;
+    inmax = dwin->inmax;
+    inarrayrock = dwin->inarrayrock;
+
     len = dwin->numchars - dwin->infence;
     if (win->echostr) 
         gli_stream_echo_line(win->echostr, &(dwin->chars[dwin->infence]), len);
     
-    if (len > dwin->inmax)
-        len = dwin->inmax;
+    /* Store in history. */
+    if (len) {
+        cx = (char *)malloc((1+len) * sizeof(char));
+        memcpy(cx, &(dwin->chars[dwin->infence]), len);
+        cx[len] = '\0';
+        if (dwin->history[dwin->historypresent]) {
+            free(dwin->history[dwin->historypresent]);
+            dwin->history[dwin->historypresent] = NULL;
+        }
+        dwin->history[dwin->historypresent] = cx;
+        dwin->historypresent++;
+        if (dwin->historypresent >= pref_historylen)
+            dwin->historypresent -= pref_historylen;
+        if (dwin->historypresent == dwin->historyfirst) {
+            dwin->historyfirst++;
+            if (dwin->historyfirst >= pref_historylen)
+                dwin->historyfirst -= pref_historylen;
+        }
+        if (dwin->history[dwin->historypresent]) {
+            free(dwin->history[dwin->historypresent]);
+            dwin->history[dwin->historypresent] = NULL;
+        }
+    }
+
+    /* Store in event buffer. */
+        
+    if (len > inmax)
+        len = inmax;
         
     for (ix=0; ix<len; ix++)
-        dwin->inbuf[ix] = dwin->chars[dwin->infence+ix];
+        inbuf[ix] = dwin->chars[dwin->infence+ix];
     
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);
@@ -1018,8 +1091,13 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     gli_event_store(evtype_LineInput, win, len, 0);
     win->line_request = FALSE;
     dwin->inbuf = NULL;
+    dwin->inmax = 0;
         
     win_textbuffer_putchar(win, '\n');
+
+    if (gli_unregister_arr) {
+        (*gli_unregister_arr)(inbuf, inmax, "&+#!Cn", inarrayrock);
+    }
 }
 
 /* Any regular key, during line input. */
@@ -1104,6 +1182,60 @@ void gcmd_buffer_delete(window_t *win, glui32 arg)
                 return;
             put_text(dwin, "", 0, dwin->incurs, 
                 dwin->numchars - dwin->incurs);
+            break;
+    }
+    
+    updatetext(dwin);
+}
+
+/* Command history, during line input. */
+void gcmd_buffer_history(window_t *win, glui32 arg)
+{
+    window_textbuffer_t *dwin = win->data;
+    char *cx;
+    int len;
+    
+    if (!dwin->inbuf || !dwin->history)
+        return;
+    
+    switch (arg) {
+        case gcmd_Up:
+            if (dwin->historypos == dwin->historyfirst)
+                return;
+            if (dwin->historypos == dwin->historypresent) {
+                len = dwin->numchars - dwin->infence;
+                if (len > 0) {
+                    cx = (char *)malloc((len+1) * sizeof(char));
+                    memcpy(cx, &(dwin->chars[dwin->infence]), len);
+                    cx[len] = '\0';
+                }
+                else {
+                    cx = NULL;
+                }
+                if (dwin->history[dwin->historypos])
+                    free(dwin->history[dwin->historypos]);
+                dwin->history[dwin->historypos] = cx;
+            }
+            dwin->historypos--;
+            if (dwin->historypos < 0)
+                dwin->historypos += pref_historylen;
+            cx = dwin->history[dwin->historypos];
+            if (!cx)
+                cx = "";
+            put_text(dwin, cx, strlen(cx), dwin->infence, 
+                dwin->numchars - dwin->infence);
+            break;
+        case gcmd_Down:
+            if (dwin->historypos == dwin->historypresent)
+                return;
+            dwin->historypos++;
+            if (dwin->historypos >= pref_historylen)
+                dwin->historypos -= pref_historylen;
+            cx = dwin->history[dwin->historypos];
+            if (!cx)
+                cx = "";
+            put_text(dwin, cx, strlen(cx), dwin->infence, 
+                dwin->numchars - dwin->infence);
             break;
     }
     

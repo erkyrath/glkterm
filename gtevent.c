@@ -1,7 +1,7 @@
 /* gtevent.c: Event handling, including glk_select() and timed input code
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -198,10 +198,7 @@ void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2)
 {
     if (curevent) {
         curevent->type = type;
-        if (win)
-            curevent->win = WindowToID(win);
-        else
-            curevent->win = 0;
+        curevent->win = win;
         curevent->val1 = val1;
         curevent->val2 = val2;
     }

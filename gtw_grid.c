@@ -1,7 +1,7 @@
 /* gtw_grid.c: The grid window type
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -62,6 +62,13 @@ window_textgrid_t *win_textgrid_create(window_t *win)
 
 void win_textgrid_destroy(window_textgrid_t *dwin)
 {
+    if (dwin->inbuf) {
+        if (gli_unregister_arr) {
+            (*gli_unregister_arr)(dwin->inbuf, dwin->inmax, "&+#!Cn", dwin->inarrayrock);
+        }
+        dwin->inbuf = NULL;
+    }
+    
     dwin->owner = NULL;
     if (dwin->lines) {
         final_lines(dwin);
@@ -375,36 +382,52 @@ void win_textgrid_init_line(window_t *win, char *buf, int maxlen, int initlen)
         dwin->curx = dwin->inorgx+dwin->incurs;
         dwin->cury = dwin->inorgy;
     }
+
+    if (gli_register_arr) {
+        dwin->inarrayrock = (*gli_register_arr)(buf, maxlen, "&+#!Cn");
+    }
 }
 
 /* Abort line input, storing whatever's been typed so far. */
 void win_textgrid_cancel_line(window_t *win, event_t *ev)
 {
     int ix;
+    char *inbuf;
+    int inmax;
+    gidispatch_rock_t inarrayrock;
     window_textgrid_t *dwin = win->data;
     tgline_t *ln = &(dwin->lines[dwin->inorgy]);
 
     if (!dwin->inbuf)
         return;
     
+    inbuf = dwin->inbuf;
+    inmax = dwin->inmax;
+    inarrayrock = dwin->inarrayrock;
+
     for (ix=0; ix<dwin->inlen; ix++)
-        dwin->inbuf[ix] = ln->chars[dwin->inorgx+ix];
+        inbuf[ix] = ln->chars[dwin->inorgx+ix];
     
     if (win->echostr) 
-        gli_stream_echo_line(win->echostr, dwin->inbuf, dwin->inlen);
+        gli_stream_echo_line(win->echostr, inbuf, dwin->inlen);
 
     dwin->cury = dwin->inorgy+1;
     dwin->curx = 0;
     win->style = dwin->origstyle;
 
     ev->type = evtype_LineInput;
-    ev->win = WindowToID(win);
+    ev->win = win;
     ev->val1 = dwin->inlen;
     
     win->line_request = FALSE;
     dwin->inbuf = NULL;
+    dwin->inmax = 0;
     dwin->inorgx = 0;
     dwin->inorgy = 0;
+
+    if (gli_unregister_arr) {
+        (*gli_unregister_arr)(inbuf, inmax, "&+#!Cn", inarrayrock);
+    }
 }
 
 /* Keybinding functions. */
@@ -420,17 +443,24 @@ void gcmd_grid_accept_key(window_t *win, glui32 arg)
 void gcmd_grid_accept_line(window_t *win, glui32 arg)
 {
     int ix;
+    char *inbuf;
+    int inmax;
+    gidispatch_rock_t inarrayrock;
     window_textgrid_t *dwin = win->data;
     tgline_t *ln = &(dwin->lines[dwin->inorgy]);
     
     if (!dwin->inbuf)
         return;
     
+    inbuf = dwin->inbuf;
+    inmax = dwin->inmax;
+    inarrayrock = dwin->inarrayrock;
+
     for (ix=0; ix<dwin->inlen; ix++)
-        dwin->inbuf[ix] = ln->chars[dwin->inorgx+ix];
+        inbuf[ix] = ln->chars[dwin->inorgx+ix];
     
     if (win->echostr) 
-        gli_stream_echo_line(win->echostr, dwin->inbuf, dwin->inlen);
+        gli_stream_echo_line(win->echostr, inbuf, dwin->inlen);
 
     dwin->cury = dwin->inorgy+1;
     dwin->curx = 0;
@@ -439,8 +469,13 @@ void gcmd_grid_accept_line(window_t *win, glui32 arg)
     gli_event_store(evtype_LineInput, win, dwin->inlen, 0);
     win->line_request = FALSE;
     dwin->inbuf = NULL;
+    dwin->inmax = 0;
     dwin->inorgx = 0;
     dwin->inorgy = 0;
+
+    if (gli_unregister_arr) {
+        (*gli_unregister_arr)(inbuf, inmax, "&+#!Cn", inarrayrock);
+    }
 }
 
 /* Any regular key, during line input. */

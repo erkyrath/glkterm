@@ -1,9 +1,9 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.5.
-Glk API which this implements: version 0.4.
+GlkTerm Library: version 0.7.1.
+Glk API which this implements: version 0.5.
 Designed by Andrew Plotkin <erkyrath@netcom.com>
-http://www.edoc.com/zarf/glk/index.html
+http://www.eblong.com/zarf/glk/index.html
 
 This is source code for an implementation of the Glk library which runs
 in a terminal window, using the curses.h library for screen control.
@@ -19,16 +19,14 @@ This source code is not directly applicable to any other display system.
 Curses library calls are scattered all through the code; I haven't tried
 to abstract them out. If you want to create a Glk library for a
 different display system, you'd best start over. Use GlkTerm for a
-starting point for terminal-window-style display systems, and MacGlk for
-graphical/windowed display systems. (Except that you shouldn't do either
-until the Glk API is finalized.) (Besides, this is still an alpha
-release, and I haven't released MacGlk yet. Sigh.)
+starting point for terminal-window-style display systems, and MacGlk or
+XGlk for graphical/windowed display systems.
 
 * Command-line arguments:
 
-At the moment GlkTerm only accepts command-line options for itself, not
-for whatever program runs under the Glk API. This will be fixed
-eventually.
+GlkTerm can accept command-line arguments both for itself and on behalf
+of the underlying program. These are the arguments the library accepts
+itself:
 
     -width NUM, -height NUM: These set the screen width and height
 manually. Normally GlkTerm determines the screen size itself, by asking
@@ -41,6 +39,8 @@ operations will grab the bottom line temporarily anyway.
     -revgrid BOOL: Reverse text in grid (status) windows (default "no").
 Set this to "yes" to display all textgrid windows (status windows) in
 reverse text.
+    -historylen NUM: The number of commands to keep in the command
+history of each window (default 20).
     -border BOOL: Draw one-character borders between windows (default
 "yes"). These are lines of '-' and '|' characters. If you set this "no",
 there's a little more room for game text, but it may be hard to
@@ -70,16 +70,128 @@ Before you compile, you should go into gtoption.h and make any changes
 necessary. You may also need to edit some include and library paths in
 the Makefile.
 
-* Operating systems which this has been compiled on:
+See the top of the Makefile for comments on installation.
+
+When you compile a Glk program and link it with GlkTerm, you must supply
+one more file: you must define a function called glkunix_startup_code(),
+and an array glkunix_arguments[]. These set up various Unix-specific
+options used by the Glk library. There is a sample "glkstart.c" file
+included in this package; you should modify it to your needs.
+
+The glkunix_arguments[] array is a list of command-line arguments that
+your program can accept. The library will sort these out of the command
+line and pass them on to your code. The array structure looks like this:
+
+typedef struct glkunix_argumentlist_struct {
+    char *name;
+    int argtype;
+    char *desc;
+} glkunix_argumentlist_t;
+
+extern glkunix_argumentlist_t glkunix_arguments[];
+
+In each entry, name is the option as it would appear on the command line
+(including the leading dash, if any.) The desc is a description of the
+argument; this is used when the library is printing a list of options.
+And argtype is one of the following constants:
+
+    glkunix_arg_NoValue: The argument appears by itself.
+    glkunix_arg_ValueFollows: The argument must be followed by another
+argument (the value).
+    glkunix_arg_ValueCanFollow: The argument may be followed by a value,
+optionally. (If the next argument starts with a dash, it is taken to be
+a new argument, not the value of this one.)
+    glkunix_arg_NumberValue: The argument must be followed by a number,
+which may be the next argument or part of this one. (That is, either
+"-width 20" or "-width20" will be accepted.)
+    glkunix_arg_End: The glkunix_arguments[] array must be terminated
+with an entry containing this value.
+
+To accept arbitrary arguments which lack dashes, specify a name of ""
+and an argtype of glkunix_arg_ValueFollows.
+
+If you don't care about command-line arguments, you must still define an
+empty arguments list, as follows:
+
+glkunix_argumentlist_t glkunix_arguments[] = {
+    { NULL, glkunix_arg_End, NULL }
+};
+
+Here is a more complete sample list:
+
+glkunix_argumentlist_t glkunix_arguments[] = {
+    { "", glkunix_arg_ValueFollows, "filename: The game file to load."
+},
+    { "-hum", glkunix_arg_ValueFollows, "-hum NUM: Hum some NUM." },
+    { "-bom", glkunix_arg_ValueCanFollow, "-bom [ NUM ]: Do a bom (on
+the NUM, if given)." },
+    { "-goo", glkunix_arg_NoValue, "-goo: Find goo." },
+    { "-wob", glkunix_arg_NumberValue, "-wob NUM: Wob NUM times." },
+    { NULL, glkunix_arg_End, NULL }
+};
+
+This would match the arguments "thingfile -goo -wob8 -bom -hum song".
+
+After the library parses the command line, it does various occult
+rituals of initialization, and then calls glkunix_startup_code().
+
+int glkunix_startup_code(glkunix_startup_t *data);
+
+This should return TRUE if everything initializes properly. If it
+returns FALSE, the library will shut down without ever calling your
+glk_main() function.
+
+The data structure looks like this:
+
+typedef struct glkunix_startup_struct {
+    int argc;
+    char **argv;
+} glkunix_startup_t;
+
+The fields are a standard Unix (argc, argv) list, which contain the
+arguments you requested from the command line. In deference to custom,
+argv[0] is always the program name.
+
+You can put other startup code in glkunix_startup_code(). This should
+generally be limited to finding and opening data files. There are a few
+Unix Glk library functions which are convenient for this purpose:
+
+strid_t glkunix_stream_open_pathname(char *pathname, glui32 textmode, 
+    glui32 rock);
+
+This opens an arbitrary file, in read-only mode. Note that this function
+is *only* available during glkunix_startup_code(). It is inherent
+non-portable; it should not and cannot be called from inside glk_main().
+
+* Operating systems and compatibility tests:
+
+On BSD-like systems, you may have to use ncurses instead of curses. This
+involves changing "#include <curses.h>" to "#include <ncurses.h>", and
+(in the Makefile) "-lcurses" to "-lncurses".
 
 SunOS:
     Uncomment the lines in the Makefile:
         INCLUDEDIRS = -I/usr/5include
         LIBDIRS = -L/usr/5lib
     #define NO_MEMMOVE in gtoption.h
-    
+
+Solaris:
+    Compiles as is (but if you have Solaris 2.4 or earlier, you may have
+to change memcpy() calls to memmove())
+
 IRIX:
     Compiles as is
+
+HPUX:
+    May have to comment out OPT_TIMED_INPUT, and remove references to
+KEY_END and KEY_HELP. (Reported for HPUX 9.0.5; I have no idea how
+current that is.)
+
+AIX:
+    See HPUX. (Reported for AIX 3.2.5).
+    
+FreeBSD:
+    Use ncurses instead of curses.
 
 Unixware:
     In the Makefile, uncomment
@@ -89,8 +201,7 @@ Unixware:
 * Notes on the source code:
 
 Functions which begin with glk_ are, of course, Glk API functions. These
-are declared in glk.h, which is not included in this package. Make sure
-glk.h is available before you try to compile this stuff.
+are declared in glk.h, which is included in this package.
 
 Functions which begin with gli_ are internal to the GlkTerm library
 implementation. They don't exist in every Glk library, because different
@@ -108,8 +219,8 @@ See the beginning of glkterm.h for the macros that handle this. If your
 system uses pointers larger than 32 bits, or if there's some wackiness
 that prevents you casting pointers to numbers and back, you'll have to
 create some other identifier system. (A hash table would work fine.)
-(Really I should make this a compile-time option; maybe later. GlkTerm
-is only alpha at the moment, after all.)
+(Soon this will all change, when the Glk API goes to opaque C pointers
+instead of integer identifiers.)
 
 Other than that, this code should be portable to any C environment which
 has an ANSI stdio library and a curses.h library. The likely trouble
@@ -119,13 +230,16 @@ respectively. glk_fileref_create_by_prompt() also contains a call to
 stat(), to implement a "Do you want to overwrite that file?" prompt. 
 
 I have not yet tried to deal with character-set issues. The library
-assumes that all input and output characters are in Latin-1. Alpha, like
-I said.
+assumes that all input and output characters are in Latin-1.
 
 Thanks to Matt Kimball for finding information on SIGWINCH and the
 curses library.
 
 * Bugs and Feature-Lacks
+
+On some (most?) Unixes, the window doesn't resize properly. This is
+probably because I'm not doing the SIGWINCH dance correctly. Still
+working on it.
 
 During glk_exit(), the "hit any key to exit" prompt doesn't do paging.
 (That is, if a game prints a lot of text and then exits, the player will
@@ -139,12 +253,27 @@ to page.
 
 When closing windows, + signs can be left in the window borders.
 
+* Version History
+
+0.7.1:
+    Fixed a couple of memory errors in the retained-array registry code.
+
+0.7:
+    Upgraded to Glk API version 0.5; added dispatch layer code.
+
+0.6:
+    The one true Unix Glk Makefile system.
+    Startup code and command-line argument system.
+    Command history (only in textbuffers)
+
+0.5: Alpha release.
+
 * Permissions
 
-The source code in this package is copyright 1998 by Andrew Plotkin. You
-may copy and distribute it freely, by any means and under any
-conditions, as long as the code and documentation is not changed. You
-may also modify this code and incorporate it into your own programs, as
-long as you retain a notice in your program or documentation which
+The source code in this package is copyright 1998-1999 by Andrew
+Plotkin. You may copy and distribute it freely, by any means and under
+any conditions, as long as the code and documentation is not changed.
+You may also modify this code and incorporate it into your own programs,
+as long as you retain a notice in your program or documentation which
 mentions my name and the URL shown above.
 

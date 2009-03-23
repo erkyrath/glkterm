@@ -1,7 +1,7 @@
 /* gtinput.c: Key input handling
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -124,12 +124,6 @@ static command_t *commands_textbuffer(int key)
     static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
 
     switch (key) {
-        case KEY_UP:
-        case '\020': /* ctrl-P */
-            return &cmdscrollupline;
-        case KEY_DOWN:
-        case '\016': /* ctrl-N */
-            return &cmdscrolldownline;
         case KEY_HOME:
             return &cmdscrolltotop;
         case KEY_END:
@@ -173,6 +167,8 @@ static command_t *commands_textbuffer_line(int key)
     static command_t cmddeletenext = { gcmd_buffer_delete, gcmd_DeleteNext };
     static command_t cmdkillinput = { gcmd_buffer_delete, gcmd_KillInput };
     static command_t cmdkillline = { gcmd_buffer_delete, gcmd_KillLine };
+    static command_t cmdhistoryprev = { gcmd_buffer_history, gcmd_Up };
+    static command_t cmdhistorynext = { gcmd_buffer_history, gcmd_Down };
 
     if (key >= 32 && key < 256 && key != '\177') 
         return &cmdinsert;
@@ -204,6 +200,12 @@ static command_t *commands_textbuffer_line(int key)
             return &cmdkillline;
         case '\025': /* ctrl-U */
             return &cmdkillinput;
+        case KEY_UP:
+        case '\020': /* ctrl-P */
+            return &cmdhistoryprev;
+        case KEY_DOWN:
+        case '\016': /* ctrl-N */
+            return &cmdhistorynext;
     }
     return NULL;
 }

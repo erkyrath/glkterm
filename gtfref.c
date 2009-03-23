@@ -1,7 +1,7 @@
 /* gtfref.c: File reference objects
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -36,16 +36,26 @@ fileref_t *gli_new_fileref(char *filename, glui32 usage, glui32 rock)
     fref->textmode = ((usage & fileusage_TextMode) != 0);
     fref->filetype = (usage & fileusage_TypeMask);
     
+    fref->prev = NULL;
     fref->next = gli_filereflist;
     gli_filereflist = fref;
+    if (fref->next) {
+        fref->next->prev = fref;
+    }
     
+    if (gli_register_obj)
+        fref->disprock = (*gli_register_obj)(fref, gidisp_Class_Fileref);
+
     return fref;
 }
 
 void gli_delete_fileref(fileref_t *fref)
 {
-    fileref_t **frefptr;
+    fileref_t *prev, *next;
     
+    if (gli_unregister_obj)
+        (*gli_unregister_obj)(fref, gidisp_Class_Fileref, fref->disprock);
+        
     fref->magicnum = 0;
     
     if (fref->filename) {
@@ -53,26 +63,25 @@ void gli_delete_fileref(fileref_t *fref)
         fref->filename = NULL;
     }
     
-    /* yank fref from the linked list. */
-    for (frefptr = &(gli_filereflist); 
-        *frefptr; 
-        frefptr = &((*frefptr)->next)) {
-        if (*frefptr == fref) {
-            *frefptr = fref->next;
-            break;
-        }
-    }
+    prev = fref->prev;
+    next = fref->next;
+    fref->prev = NULL;
     fref->next = NULL;
+
+    if (prev)
+        prev->next = next;
+    else
+        gli_filereflist = next;
+    if (next)
+        next->prev = prev;
     
     free(fref);
 }
 
-void glk_fileref_destroy(frefid_t id)
+void glk_fileref_destroy(fileref_t *fref)
 {
-    fileref_t *fref;
-    
-    if (!id || !(fref = IDToFileref(id))) {
-        gli_strict_warning("fileref_destroy: invalid id");
+    if (!fref) {
+        gli_strict_warning("fileref_destroy: invalid ref");
         return;
     }
     gli_delete_fileref(fref);
@@ -95,7 +104,7 @@ frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
         return 0;
     }
     
-    return FilerefToID(fref);
+    return fref;
 }
 
 frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
@@ -143,7 +152,7 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
         return 0;
     }
     
-    return FilerefToID(fref);
+    return fref;
 }
 
 frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
@@ -237,64 +246,45 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         return 0;
     }
     
-    return FilerefToID(fref);
+    return fref;
 }
 
-frefid_t glk_fileref_iterate(frefid_t id, glui32 *rockptr)
+frefid_t glk_fileref_iterate(fileref_t *fref, glui32 *rock)
 {
-    fileref_t *fref;
-
-    if (!id) {
-        if (gli_filereflist) {
-            if (rockptr)
-                *rockptr = gli_filereflist->rock;
-            return FilerefToID(gli_filereflist);
-        }
-        else {
-            if (rockptr)
-                *rockptr = 0;
-            return 0;
-        }
+    if (!fref) {
+        fref = gli_filereflist;
     }
     else {
-        fref = IDToFileref(id);
-        if (!fref) {
-            gli_strict_warning("fileref_iterate: invalid id.");
-            return 0;
-        }
         fref = fref->next;
-        if (fref) {
-            if (rockptr)
-                *rockptr = fref->rock;
-            return FilerefToID(fref);
-        }
-        else {
-            if (rockptr)
-                *rockptr = 0;
-            return 0;
-        }
     }
+    
+    if (fref) {
+        if (rock)
+            *rock = fref->rock;
+        return fref;
+    }
+    
+    if (rock)
+        *rock = 0;
+    return NULL;
 }
 
-glui32 glk_fileref_get_rock(frefid_t id)
+glui32 glk_fileref_get_rock(fileref_t *fref)
 {
-    fileref_t *fref;
-
-    if (!id || !(fref = IDToFileref(id))) {
-        gli_strict_warning("fileref_get_rock: invalid id.");
+    if (!fref) {
+        gli_strict_warning("fileref_get_rock: invalid ref.");
         return 0;
     }
     
     return fref->rock;
 }
 
-glui32 glk_fileref_does_file_exist(frefid_t id)
+glui32 glk_fileref_does_file_exist(fileref_t *fref)
 {
-    fileref_t *fref;
     struct stat buf;
     
-    if (!id || !(fref = IDToFileref(id))) {
-        gli_strict_warning("fileref_does_file_exist: invalid id");
+    if (!fref) {
+        gli_strict_warning("fileref_does_file_exist: invalid ref");
         return FALSE;
     }
     
@@ -310,12 +300,10 @@ glui32 glk_fileref_does_file_exist(frefid_t id)
         return 0;
 }
 
-void glk_fileref_delete_file(frefid_t id)
+void glk_fileref_delete_file(fileref_t *fref)
 {
-    fileref_t *fref;
-    
-    if (!id || !(fref = IDToFileref(id))) {
-        gli_strict_warning("fileref_delete_file: invalid id");
+    if (!fref) {
+        gli_strict_warning("fileref_delete_file: invalid ref");
         return;
     }
     

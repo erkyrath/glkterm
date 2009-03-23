@@ -1,7 +1,7 @@
 /* gtw_blnk.h: The blank window header file
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 typedef struct window_blank_struct {

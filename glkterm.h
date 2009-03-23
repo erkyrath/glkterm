@@ -1,11 +1,13 @@
 /* glkterm.h: Private header file
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 #ifndef GLKTERM_H
 #define GLKTERM_H
+
+#include "gi_dispa.h"
 
 /* We define our own TRUE and FALSE and NULL, because ANSI
     is a strange world. */
@@ -18,38 +20,6 @@
 #ifndef NULL
 #define NULL 0
 #endif
-
-/* Now, some macros to convert object IDs to internal object pointers.
-    I am doing this in the cheapest possible way: I cast the pointer to
-    an integer. This assumes that glui32 is big enough to hold an 
-    arbitrary pointer. (If this is not true, don't even try to run this 
-    code.)
-   The first field of each object is a magic number which identifies the
-    object type. This lets us have a *little* bit of run-time type 
-    safety; if you try to convert an ID of the wrong type, the macro 
-    will return NULL. But this is not very safe, because a random ID 
-    value can still cause a memory fault or crash.
-   A safer approach would be to store IDs in a hash table, and rewrite
-    these macros to perform hash table lookups and references. Feel 
-    free.
-   Note that these macros are not intended to convert between the values
-    NULL and 0. (It is true that WindowToID(NULL) will evaluate to 0 on
-    almost all systems, but the library code does not rely on this, so
-    if you rewrite WindowToID you don't need to guarantee it.) */
-
-#define WindowToID(win)  ((glui32)(win))
-#define StreamToID(str)  ((glui32)(str))
-#define FilerefToID(fref)  ((glui32)(fref))
-
-#define IDToWindow(id)    \
-    ((((window_t *)(id))->magicnum == MAGIC_WINDOW_NUM)    \
-    ? ((window_t *)(id)) : NULL)
-#define IDToStream(id)    \
-    ((((stream_t *)(id))->magicnum == MAGIC_STREAM_NUM)    \
-    ? ((stream_t *)(id)) : NULL)
-#define IDToFileref(id)    \
-    ((((fileref_t *)(id))->magicnum == MAGIC_FILEREF_NUM)    \
-    ? ((fileref_t *)(id)) : NULL)
 
 /* This macro is called whenever the library code catches an error
     or illegal operation from the game program. */
@@ -64,15 +34,15 @@ typedef struct grect_struct {
     int right, bottom;
 } grect_t;
 
-typedef struct window_struct window_t;
-typedef struct stream_struct stream_t;
-typedef struct fileref_struct fileref_t;
+typedef struct glk_window_struct window_t;
+typedef struct glk_stream_struct stream_t;
+typedef struct glk_fileref_struct fileref_t;
 
 #define MAGIC_WINDOW_NUM (9826)
 #define MAGIC_STREAM_NUM (8269)
 #define MAGIC_FILEREF_NUM (6982)
 
-struct window_struct {
+struct glk_window_struct {
     glui32 magicnum;
     glui32 rock;
     glui32 type;
@@ -89,14 +59,15 @@ struct window_struct {
 
     glui32 style;
     
-    window_t *next; /* in the big linked list of windows */
+    gidispatch_rock_t disprock;
+    window_t *next, *prev; /* in the big linked list of windows */
 };
 
 #define strtype_File (1)
 #define strtype_Window (2)
 #define strtype_Memory (3)
 
-struct stream_struct {
+struct glk_stream_struct {
     glui32 magicnum;
     glui32 rock;
 
@@ -117,11 +88,13 @@ struct stream_struct {
     unsigned char *bufend;
     unsigned char *bufeof;
     glui32 buflen;
+    gidispatch_rock_t arrayrock;
 
-    stream_t *next; /* in the big linked list of streams */
+    gidispatch_rock_t disprock;
+    stream_t *next, *prev; /* in the big linked list of streams */
 };
 
-struct fileref_struct {
+struct glk_fileref_struct {
     glui32 magicnum;
     glui32 rock;
 
@@ -129,7 +102,8 @@ struct fileref_struct {
     int filetype;
     int textmode;
 
-    fileref_t *next; /* in the big linked list of filerefs */
+    gidispatch_rock_t disprock;
+    fileref_t *next, *prev; /* in the big linked list of filerefs */
 };
 
 /* Arguments to keybindings */
@@ -171,6 +145,12 @@ extern unsigned char char_from_native_table[256];
 extern unsigned char char_to_native_table[256];
 #endif /* OPT_NATIVE_LATIN_1 */
 
+extern gidispatch_rock_t (*gli_register_obj)(void *obj, glui32 objclass);
+extern void (*gli_unregister_obj)(void *obj, glui32 objclass, gidispatch_rock_t objrock);
+extern gidispatch_rock_t (*gli_register_arr)(void *array, glui32 len, char *typecode);
+extern void (*gli_unregister_arr)(void *array, glui32 len, char *typecode, 
+    gidispatch_rock_t objrock);
+
 extern int pref_printversion;
 extern int pref_screenwidth;
 extern int pref_screenheight;
@@ -178,6 +158,7 @@ extern int pref_messageline;
 extern int pref_reverse_textgrids;
 extern int pref_window_borders;
 extern int pref_precise_timing;
+extern int pref_historylen;
 
 /* Declarations of library internal functions. */
 
@@ -223,6 +204,8 @@ extern stream_t *gli_new_stream(int type, int readable, int writable,
     glui32 rock);
 extern void gli_delete_stream(stream_t *str);
 extern stream_t *gli_stream_open_window(window_t *win);
+extern strid_t gli_stream_open_pathname(char *pathname, int textmode, 
+    glui32 rock);
 extern void gli_stream_set_current(stream_t *str);
 extern void gli_stream_fill_result(stream_t *str, 
     stream_result_t *result);
@@ -237,7 +220,7 @@ extern void gli_delete_fileref(fileref_t *fref);
 
 #define gli_event_clearevent(evp)  \
     ((evp)->type = evtype_None,    \
-    (evp)->win = 0,    \
+    (evp)->win = NULL,    \
     (evp)->val1 = 0,   \
     (evp)->val2 = 0)
 

@@ -1,7 +1,7 @@
 /* gtw_buf.h: The buffer window header
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 /* Word types. */
@@ -70,6 +70,11 @@ typedef struct window_textbuffer_struct {
     tbword_t *tmpwords;
     long tmpwordssize;
 
+    /* Command history. */
+    char **history;
+    int historypos;
+    int historyfirst, historypresent;
+
     long scrollline;
     long scrollpos;
     long lastseenline;
@@ -80,7 +85,7 @@ typedef struct window_textbuffer_struct {
     long infence;
     long incurs;
     glui32 origstyle;
-    
+    gidispatch_rock_t inarrayrock;
 } window_textbuffer_t;
 
 extern chtype win_textbuffer_styleattrs[style_NUMSTYLES];
@@ -103,5 +108,6 @@ extern void gcmd_buffer_accept_line(window_t *win, glui32 arg);
 extern void gcmd_buffer_insert_key(window_t *win, glui32 arg);
 extern void gcmd_buffer_move_cursor(window_t *win, glui32 arg);
 extern void gcmd_buffer_delete(window_t *win, glui32 arg);
+extern void gcmd_buffer_history(window_t *win, glui32 arg);
 extern void gcmd_buffer_scroll(window_t *win, glui32 arg);
 

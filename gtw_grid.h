@@ -1,7 +1,7 @@
 /* gtw_grid.h: The grid window header
         for GlkTerm, curses.h implementation of the Glk API.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
-    http://www.edoc.com/zarf/glk/index.html
+    http://www.eblong.com/zarf/glk/index.html
 */
 
 /* One line of the window. */
@@ -30,6 +30,7 @@ typedef struct window_textgrid_struct {
     int inmax;
     int incurs, inlen;
     glui32 origstyle;
+    gidispatch_rock_t inarrayrock;
 } window_textgrid_t;
 
 extern chtype win_textgrid_styleattrs[style_NUMSTYLES];

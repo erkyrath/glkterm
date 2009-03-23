@@ -1,4 +1,12 @@
-# Makefile for GlkTerm library and model.c
+# Unix Makefile for GlkTerm library
+
+# This generates two files. One, of course, is libglkterm.a -- the library
+# itself. The other is Make.glkterm; this is a snippet of Makefile code
+# which locates the glkterm library and associated libraries (such as
+# curses.)
+#
+# When you install glkterm, you must put libglkterm.a in the lib directory,
+# and glk.h, glkstart.h, and Make.glkterm in the include directory.
 
 # Pick a C compiler.
 #CC = cc
@@ -7,30 +15,35 @@ CC = gcc -ansi
 # You may need to set directories to pick up the curses library.
 #INCLUDEDIRS = -I/usr/5include
 #LIBDIRS = -L/usr/5lib 
-
-OPTIONS = -O
 LIBS = -lcurses
 
+OPTIONS = -O
+
 CFLAGS = $(OPTIONS) $(INCLUDEDIRS)
+
+GLKLIB = libglkterm.a
 
 GLKTERM_OBJS = \
   main.o gtevent.o gtfref.o gtgestal.o gtinput.o \
   gtmessag.o gtmessin.o gtmisc.o gtstream.o gtstyle.o \
-  gtw_blnk.o gtw_buf.o gtw_grid.o gtw_pair.o gtwindow.o  
+  gtw_blnk.o gtw_buf.o gtw_grid.o gtw_pair.o gtwindow.o \
+  gi_dispa.o
 
 GLKTERM_HEADERS = \
   glkterm.h gtoption.h gtw_blnk.h gtw_buf.h \
-  gtw_grid.h gtw_pair.h
+  gtw_grid.h gtw_pair.h gi_dispa.h
 
-all: model multiwin
+all: $(GLKLIB) Make.glkterm
 
-model: $(GLKTERM_OBJS)
-	$(CC) -o model model.c $(GLKTERM_OBJS) $(LIBDIRS) $(LIBS)
+$(GLKLIB): $(GLKTERM_OBJS)
+	ar r $(GLKLIB) $(GLKTERM_OBJS)
+	ranlib $(GLKLIB)
 
-multiwin: $(GLKTERM_OBJS)
-	$(CC) -o multiwin multiwin.c $(GLKTERM_OBJS) $(LIBDIRS) $(LIBS)
+Make.glkterm:
+	echo LINKLIBS = $(LIBDIRS) $(LIBS) > Make.glkterm
+	echo GLKLIB = -lglkterm >> Make.glkterm
 
 $(GLKTERM_OBJS): glk.h $(GLKTERM_HEADERS)
 
 clean:
-	\rm -f *~ *.o model multiwin
+	rm -f *~ *.o $(GLKLIB) Make.glkterm
