@@ -2,7 +2,7 @@
 #define GLK_H
 
 /* glk.h: Header file for Glk API, version 0.52.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 
     This file is copyright 1998-1999 by Andrew Plotkin. You may copy,

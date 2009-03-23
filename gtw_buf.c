@@ -1,6 +1,6 @@
 /* gtw_buf.c: The buffer window type
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 
@@ -1028,6 +1028,7 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
 void gcmd_buffer_accept_key(window_t *win, glui32 arg)
 {
     win->char_request = FALSE; 
+    arg = gli_input_from_native(arg);
     gli_event_store(evtype_CharInput, win, arg, 0);
 }
 
@@ -1082,8 +1083,13 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     if (len > inmax)
         len = inmax;
         
-    for (ix=0; ix<len; ix++)
-        inbuf[ix] = dwin->chars[dwin->infence+ix];
+    for (ix=0; ix<len; ix++) {
+        int val = dwin->chars[dwin->infence+ix];
+	glui32 kval = gli_input_from_native(val & 0xFF);
+	if (!(kval >= 0 && kval < 256))
+            kval = '?';
+	inbuf[ix] = kval;
+    }
     
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);

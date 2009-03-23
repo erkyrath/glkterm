@@ -1,6 +1,6 @@
 /* gtoption.h: Options header file
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 
@@ -16,7 +16,7 @@
 
 /* Options: */
 
-#define LIBRARY_VERSION "0.7.4"
+#define LIBRARY_VERSION "0.7.5"
 #define LIBRARY_PORT "Generic"
 
 /* If you change this code substantially, you should change the

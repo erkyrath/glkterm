@@ -1,6 +1,6 @@
 /* gtevent.c: Event handling, including glk_select() and timed input code
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 

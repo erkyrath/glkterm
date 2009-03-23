@@ -1,6 +1,6 @@
 /* gtinput.c: Key input handling
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 
@@ -304,6 +304,72 @@ static char *key_to_name(int key)
     return "unknown-key";
 }
 
+glui32 gli_input_from_native(int key)
+{
+  glui32 arg = 0;
+
+  /* convert from curses.h key codes to Glk, if necessary. */
+  switch (key) {
+  case '\t': 
+    arg = keycode_Tab;
+    break;
+  case '\033':
+    arg = keycode_Escape;
+    break;
+  case KEY_DOWN:
+    arg = keycode_Down;
+    break;
+  case KEY_UP:
+    arg = keycode_Up;
+    break;
+  case KEY_LEFT:
+    arg = keycode_Left;
+    break;
+  case KEY_RIGHT:
+    arg = keycode_Right;
+    break;
+  case KEY_HOME:
+    arg = keycode_Home;
+    break;
+  case '\177': /* delete */
+  case '\010': /* backspace */
+  case KEY_BACKSPACE:
+  case KEY_DC:
+    arg = keycode_Delete;
+    break;
+  case KEY_NPAGE:
+    arg = keycode_PageDown;
+    break;
+  case KEY_PPAGE:
+    arg = keycode_PageUp;
+    break;
+  case KEY_ENTER:
+  case '\012': /* ctrl-J */
+  case '\015': /* ctrl-M */
+    arg = keycode_Return;
+    break;
+  case KEY_END:
+    arg = keycode_End;
+    break;
+  default:
+    if (key < 0 || key >= 256) {
+      arg = keycode_Unknown;
+    }
+    else {
+#ifdef OPT_NATIVE_LATIN_1
+      arg = key;
+#else /* OPT_NATIVE_LATIN_1 */
+      arg = char_from_native_table[key];
+      if (!arg && key != '\0')
+	arg = keycode_Unknown;
+#endif /* OPT_NATIVE_LATIN_1 */
+    }
+    break;
+  }
+
+  return arg;
+}
+
 /* Handle a keystroke. This is called from glk_select() whenever a
     key is hit. */
 void gli_input_handle_key(int key)
@@ -349,64 +415,7 @@ void gli_input_handle_key(int key)
         /* We found a binding. Run it. */
         glui32 arg;
         if (cmd->arg == -1) {
-            /* convert from curses.h key codes to Glk, if necessary. */
-            switch (key) {
-                case '\t': 
-                    arg = keycode_Tab;
-                    break;
-                case '\033':
-                    arg = keycode_Escape;
-                    break;
-                case KEY_DOWN:
-                    arg = keycode_Down;
-                    break;
-                case KEY_UP:
-                    arg = keycode_Up;
-                    break;
-                case KEY_LEFT:
-                    arg = keycode_Left;
-                    break;
-                case KEY_RIGHT:
-                    arg = keycode_Right;
-                    break;
-                case KEY_HOME:
-                    arg = keycode_Home;
-                    break;
-                case '\177': /* delete */
-                case '\010': /* backspace */
-                case KEY_BACKSPACE:
-                case KEY_DC:
-                    arg = keycode_Delete;
-                    break;
-                case KEY_NPAGE:
-                    arg = keycode_PageDown;
-                    break;
-                case KEY_PPAGE:
-                    arg = keycode_PageUp;
-                    break;
-                case KEY_ENTER:
-                case '\012': /* ctrl-J */
-                case '\015': /* ctrl-M */
-                    arg = keycode_Return;
-                    break;
-                case KEY_END:
-                    arg = keycode_End;
-                    break;
-                default:
-                    if (key < 0 || key >= 256) {
-                        arg = keycode_Unknown;
-                    }
-                    else {
-#ifdef OPT_NATIVE_LATIN_1
-                        arg = key;
-#else /* OPT_NATIVE_LATIN_1 */
-                        arg = char_from_native_table[key];
-                        if (!arg && key != '\0')
-                            arg = keycode_Unknown;
-#endif /* OPT_NATIVE_LATIN_1 */
-                    }
-                    break;
-            }
+            arg = (glui32)key;
         }
         else {
             arg = cmd->arg;

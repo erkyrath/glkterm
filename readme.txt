@@ -1,8 +1,8 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.4.
+GlkTerm Library: version 0.7.5.
 Glk API which this implements: version 0.5.2.
-Designed by Andrew Plotkin <erkyrath@netcom.com>
+Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://www.eblong.com/zarf/glk/index.html
 
 This is source code for an implementation of the Glk library which runs
@@ -263,6 +263,11 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+0.7.5:
+    Input of accented characters should work right on non-Latin-1 systems
+    now.
+    A bit more buffer-overflow checking in the fileref code.
 
 0.7.4:
     Fixed bugs in window resizing.

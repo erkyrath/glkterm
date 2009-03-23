@@ -1,6 +1,6 @@
 /* glkterm.h: Private header file
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 
@@ -179,6 +179,7 @@ extern void gli_set_halfdelay(void);
 
 extern void gli_input_handle_key(int key);
 extern void gli_input_guess_focus(void);
+extern glui32 gli_input_from_native(int key);
 
 extern void gli_initialize_windows(void);
 extern void gli_setup_curses(void);

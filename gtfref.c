@@ -1,6 +1,6 @@
 /* gtfref.c: File reference objects
         for GlkTerm, curses.h implementation of the Glk API.
-    Designed by Andrew Plotkin <erkyrath@netcom.com>
+    Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://www.eblong.com/zarf/glk/index.html
 */
 
@@ -21,11 +21,13 @@
 /* Linked list of all filerefs */
 static fileref_t *gli_filereflist = NULL; 
 
-static char workingdir[256] = ".";
-static char lastsavename[256] = "game.sav";
-static char lastscriptname[256] = "script.txt";
-static char lastcmdname[256] = "commands.txt";
-static char lastdataname[256] = "file.dat";
+#define BUFLEN (256)
+
+static char workingdir[BUFLEN] = ".";
+static char lastsavename[BUFLEN] = "game.sav";
+static char lastscriptname[BUFLEN] = "script.txt";
+static char lastcmdname[BUFLEN] = "commands.txt";
+static char lastdataname[BUFLEN] = "file.dat";
 
 fileref_t *gli_new_fileref(char *filename, glui32 usage, glui32 rock)
 {
@@ -136,14 +138,14 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
     glui32 rock)
 {
     fileref_t *fref;
-    char buf[256];
-    char buf2[256];
+    char buf[BUFLEN];
+    char buf2[BUFLEN];
     int len;
     char *cx;
     
     len = strlen(name);
-    if (len > 255)
-        len = 255;
+    if (len > BUFLEN-1)
+        len = BUFLEN-1;
     
     /* Take out all '/' characters, and make sure the length is greater 
         than zero. Again, this is the right behavior in Unix. 
@@ -172,6 +174,10 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
             *cx = '-';
     }
     
+    if (len + 1 + strlen(workingdir) >= BUFLEN) {
+        gli_strict_warning("fileref_create_by_name: filename too long.");
+        return NULL;
+    }
     sprintf(buf2, "%s/%s", workingdir, buf);
 
     fref = gli_new_fileref(buf2, usage, rock);
@@ -188,7 +194,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 {
     fileref_t *fref;
     struct stat sbuf;
-    char buf[256], prbuf[256], newbuf[256];
+    char buf[BUFLEN], prbuf[BUFLEN], newbuf[BUFLEN];
     char *cx;
     int ix, val;
     char *prompt, *prompt2, *lastbuf;
@@ -254,8 +260,13 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 
     if (cx[0] == '/')
         strcpy(newbuf, cx);
-    else
+    else {
+        if (strlen(workingdir) + 1 + strlen(cx) >= BUFLEN) {
+            gli_strict_warning("fileref_create_by_name: filename too long.");
+            return NULL;
+	}
         sprintf(newbuf, "%s/%s", workingdir, cx);
+    }
     
     if (fmode != filemode_Read) {
         if (!stat(newbuf, &sbuf) && S_ISREG(sbuf.st_mode)) {
