@@ -11,22 +11,22 @@
 
 /* ### None of these functions are particularly implemented yet. */
 
-void glk_stylehint_set(uint32 wintype, uint32 styl, uint32 hint, 
-    uint32 val)
+void glk_stylehint_set(glui32 wintype, glui32 styl, glui32 hint, 
+    glsi32 val)
 {
 }
 
-void glk_stylehint_clear(uint32 wintype, uint32 styl, uint32 hint)
+void glk_stylehint_clear(glui32 wintype, glui32 styl, glui32 hint)
 {
 }
 
-uint32 glk_style_distinguish(winid_t win, uint32 styl1, uint32 styl2)
+glui32 glk_style_distinguish(winid_t win, glui32 styl1, glui32 styl2)
 {
     return FALSE;
 }
 
-uint32 glk_style_measure(winid_t win, uint32 styl, uint32 hint, 
-    uint32 *result)
+glui32 glk_style_measure(winid_t win, glui32 styl, glui32 hint, 
+    glui32 *result)
 {
     return FALSE;
 }

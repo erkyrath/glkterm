@@ -21,7 +21,7 @@
 
 /* Now, some macros to convert object IDs to internal object pointers.
     I am doing this in the cheapest possible way: I cast the pointer to
-    an integer. This assumes that uint32 is big enough to hold an 
+    an integer. This assumes that glui32 is big enough to hold an 
     arbitrary pointer. (If this is not true, don't even try to run this 
     code.)
    The first field of each object is a magic number which identifies the
@@ -37,9 +37,9 @@
     almost all systems, but the library code does not rely on this, so
     if you rewrite WindowToID you don't need to guarantee it.) */
 
-#define WindowToID(win)  ((uint32)(win))
-#define StreamToID(str)  ((uint32)(str))
-#define FilerefToID(fref)  ((uint32)(fref))
+#define WindowToID(win)  ((glui32)(win))
+#define StreamToID(str)  ((glui32)(str))
+#define FilerefToID(fref)  ((glui32)(fref))
 
 #define IDToWindow(id)    \
     ((((window_t *)(id))->magicnum == MAGIC_WINDOW_NUM)    \
@@ -73,9 +73,9 @@ typedef struct fileref_struct fileref_t;
 #define MAGIC_FILEREF_NUM (6982)
 
 struct window_struct {
-    uint32 magicnum;
-    uint32 rock;
-    uint32 type;
+    glui32 magicnum;
+    glui32 rock;
+    glui32 type;
     
     grect_t bbox; /* content rectangle, excluding borders */
     window_t *parent; /* pair window which contains this one */
@@ -86,7 +86,7 @@ struct window_struct {
     
     int line_request;
     int char_request;
-    uint32 style;
+    glui32 style;
     
     window_t *next; /* in the big linked list of windows */
 };
@@ -96,12 +96,12 @@ struct window_struct {
 #define strtype_Memory (3)
 
 struct stream_struct {
-    uint32 magicnum;
-    uint32 rock;
+    glui32 magicnum;
+    glui32 rock;
 
     int type; /* file, window, or memory stream */
     
-    uint32 readcount, writecount;
+    glui32 readcount, writecount;
     int readable, writable;
     
     /* for strtype_Window */
@@ -115,14 +115,14 @@ struct stream_struct {
     unsigned char *bufptr;
     unsigned char *bufend;
     unsigned char *bufeof;
-    uint32 buflen;
+    glui32 buflen;
 
     stream_t *next; /* in the big linked list of streams */
 };
 
 struct fileref_struct {
-    uint32 magicnum;
-    uint32 rock;
+    glui32 magicnum;
+    glui32 rock;
 
     char *filename;
     int filetype;
@@ -153,10 +153,14 @@ struct fileref_struct {
 extern window_t *gli_rootwin;
 extern window_t *gli_focuswin;
 extern grect_t content_box;
+extern void (*gli_interrupt_handler)(void);
 
+#ifdef OPT_USE_SIGNALS
+    extern int just_resumed;
 #ifdef OPT_WINCHANGED_SIGNAL
-extern int screen_size_changed;
+        extern int screen_size_changed;
 #endif /* OPT_WINCHANGED_SIGNAL */
+#endif /* OPT_USE_SIGNALS */
 
 extern int pref_printversion;
 extern int pref_screenwidth;
@@ -178,12 +182,14 @@ extern int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length);
 extern int gli_msgin_getchar(char *prompt, int hilite);
 
 extern void gli_initialize_events(void);
-extern void gli_event_store(uint32 type, window_t *win, uint32 val1, uint32 val2);
+extern void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2);
+extern void gli_set_halfdelay(void);
 
 extern void input_handle_key(int key);
 
 extern void gli_initialize_windows(void);
-extern window_t *gli_new_window(uint32 type, uint32 rock);
+extern void gli_setup_curses(void);
+extern window_t *gli_new_window(glui32 type, glui32 rock);
 extern void gli_delete_window(window_t *win);
 extern window_t *gli_window_iterate_treeorder(window_t *win);
 extern void gli_window_rearrange(window_t *win, grect_t *box);
@@ -200,17 +206,17 @@ extern void gcmd_win_change_focus(window_t *win, int arg);
 extern void gcmd_win_refresh(window_t *win, int arg);
 
 extern stream_t *gli_new_stream(int type, int readable, int writable, 
-    uint32 rock);
+    glui32 rock);
 extern void gli_delete_stream(stream_t *str);
 extern stream_t *gli_stream_open_window(window_t *win);
 extern void gli_stream_set_current(stream_t *str);
 extern void gli_stream_fill_result(stream_t *str, 
     stream_result_t *result);
-extern void gli_stream_echo_line(stream_t *str, char *buf, uint32 len);
+extern void gli_stream_echo_line(stream_t *str, char *buf, glui32 len);
 extern void gli_streams_close_all(void);
 
-extern fileref_t *gli_new_fileref(char *filename, uint32 usage, 
-    uint32 rock);
+extern fileref_t *gli_new_fileref(char *filename, glui32 usage, 
+    glui32 rock);
 extern void gli_delete_fileref(fileref_t *fref);
 
 /* A macro that I can't think of anywhere else to put it. */

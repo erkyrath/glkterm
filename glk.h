@@ -1,18 +1,20 @@
 #ifndef GLK_H
 #define GLK_H
 
-/* glk.h: Header file for Glk API, version 0.3.
+/* glk.h: Header file for Glk API, version 0.4.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.edoc.com/zarf/glk/index.html
 */
 
-/* You may have to edit the definition of uint32 to make sure it's really a
-    32-bit unsigned integer type. If it's not, horrible things will happen. */
-typedef unsigned long uint32; 
+/* You may have to edit the definition of glui32 to make sure it's really a
+    32-bit unsigned integer type, and glsi32 to make sure it's really a
+    32-bit signed integer type. If they're not, horrible things will happen. */
+typedef unsigned long glui32; 
+typedef signed long glsi32; 
 
-typedef uint32 winid_t;
-typedef uint32 strid_t;
-typedef uint32 frefid_t;
+typedef glui32 winid_t;
+typedef glui32 strid_t;
+typedef glui32 frefid_t;
 
 #define gestalt_Version (0)
 #define gestalt_CharInput (1)
@@ -23,6 +25,8 @@ typedef uint32 frefid_t;
 #define   gestalt_CharOutput_ExactPrint (2)
 #define gestalt_MouseInput (4)
 #define gestalt_Timer (5)
+#define gestalt_FunctionIDToName (6)
+#define gestalt_FunctionNameToID (7)
 
 #define evtype_None (0)
 #define evtype_Timer (1)
@@ -32,9 +36,9 @@ typedef uint32 frefid_t;
 #define evtype_Arrange (5) 
 
 typedef struct event_struct {
-    uint32 type;
+    glui32 type;
     winid_t win; 
-    uint32 val1, val2;
+    glui32 val1, val2;
 } event_t;
 
 #define keycode_Unknown  (0xffffffff)
@@ -79,8 +83,8 @@ typedef struct event_struct {
 #define style_NUMSTYLES (11)
 
 typedef struct stream_result_struct {
-    uint32 readcount;
-    uint32 writecount;
+    glui32 readcount;
+    glui32 writecount;
 } stream_result_t;
 
 #define wintype_AllTypes (0) 
@@ -139,44 +143,45 @@ extern void glk_main(void);
 
 extern void glk_exit(void);
 extern void glk_set_interrupt_handler(void (*func)(void));
+extern void glk_tick(void);
 
-extern uint32 glk_gestalt(uint32 id, uint32 val);
-extern uint32 glk_gestalt_ext(uint32 id, uint32 val, void *ptr);
+extern glui32 glk_gestalt(glui32 id, glui32 val);
+extern glui32 glk_gestalt_ext(glui32 id, glui32 val, void *ptr);
 
 extern unsigned char glk_char_to_lower(unsigned char ch);
 extern unsigned char glk_char_to_upper(unsigned char ch);
 
 extern winid_t glk_window_get_root(void);
-extern winid_t glk_window_open(winid_t split, uint32 method, uint32 size, 
-    uint32 wintype, uint32 rock);
+extern winid_t glk_window_open(winid_t split, glui32 method, glui32 size, 
+    glui32 wintype, glui32 rock);
 extern void glk_window_close(winid_t win, stream_result_t *result);
-extern void glk_window_get_size(winid_t win, uint32 *widthptr, 
-    uint32 *heightptr);
-extern void glk_window_set_arrangement(winid_t win, uint32 method,
-    uint32 size, winid_t keywin);
-extern void glk_window_get_arrangement(winid_t win, uint32 *methodptr,
-    uint32 *sizeptr, winid_t *keywinptr);
-extern winid_t glk_window_iterate(winid_t win, uint32 *rockptr);
-extern uint32 glk_window_get_rock(winid_t win);
-extern uint32 glk_window_get_type(winid_t win);
+extern void glk_window_get_size(winid_t win, glui32 *widthptr, 
+    glui32 *heightptr);
+extern void glk_window_set_arrangement(winid_t win, glui32 method,
+    glui32 size, winid_t keywin);
+extern void glk_window_get_arrangement(winid_t win, glui32 *methodptr,
+    glui32 *sizeptr, winid_t *keywinptr);
+extern winid_t glk_window_iterate(winid_t win, glui32 *rockptr);
+extern glui32 glk_window_get_rock(winid_t win);
+extern glui32 glk_window_get_type(winid_t win);
 extern winid_t glk_window_get_parent(winid_t win);
 extern void glk_window_clear(winid_t win); 
-extern void glk_window_move_cursor(winid_t win, uint32 xpos, uint32 ypos);
+extern void glk_window_move_cursor(winid_t win, glui32 xpos, glui32 ypos);
 
 extern strid_t glk_window_get_stream(winid_t win);
 extern void glk_window_set_echo_stream(winid_t win, strid_t str);
 extern strid_t glk_window_get_echo_stream(winid_t win);
 extern void glk_set_window(winid_t win);
 
-extern strid_t glk_stream_open_file(frefid_t fileref, uint32 fmode,
-    uint32 rock);
-extern strid_t glk_stream_open_memory(void *buf, uint32 buflen, uint32 fmode,
-    uint32 rock);
+extern strid_t glk_stream_open_file(frefid_t fileref, glui32 fmode,
+    glui32 rock);
+extern strid_t glk_stream_open_memory(void *buf, glui32 buflen, glui32 fmode,
+    glui32 rock);
 extern void glk_stream_close(strid_t str, stream_result_t *result); 
-extern strid_t glk_stream_iterate(strid_t str, uint32 *rockptr);
-extern uint32 glk_stream_get_rock(strid_t str);
-extern void glk_stream_set_position(strid_t str, uint32 pos, uint32 seekmode);
-extern uint32 glk_stream_get_position(strid_t str);
+extern strid_t glk_stream_iterate(strid_t str, glui32 *rockptr);
+extern glui32 glk_stream_get_rock(strid_t str);
+extern void glk_stream_set_position(strid_t str, glsi32 pos, glui32 seekmode);
+extern glui32 glk_stream_get_position(strid_t str);
 extern void glk_stream_set_current(strid_t str); 
 extern strid_t glk_stream_get_current(void);
 
@@ -184,37 +189,40 @@ extern void glk_put_char(unsigned char ch);
 extern void glk_put_char_stream(strid_t str, unsigned char ch);
 extern void glk_put_string(char *s);
 extern void glk_put_string_stream(strid_t str, char *s);
-extern void glk_put_buffer(char *buf, uint32 len);
-extern void glk_put_buffer_stream(strid_t str, char *buf, uint32 len);
-extern void glk_set_style(uint32 styl);
-extern void glk_set_style_stream(strid_t str, uint32 styl);
+extern void glk_put_buffer(char *buf, glui32 len);
+extern void glk_put_buffer_stream(strid_t str, char *buf, glui32 len);
+extern void glk_set_style(glui32 styl);
+extern void glk_set_style_stream(strid_t str, glui32 styl);
 
-extern uint32 glk_get_char_stream(strid_t str);
-extern void glk_get_line_stream(strid_t str, char *buf, uint32 len);
-extern void glk_get_buffer_stream(strid_t str, char *buf, uint32 len);
+extern glui32 glk_get_char_stream(strid_t str);
+extern glui32 glk_get_line_stream(strid_t str, char *buf, glui32 len);
+extern glui32 glk_get_buffer_stream(strid_t str, char *buf, glui32 len);
 
-extern void glk_stylehint_set(uint32 wintype, uint32 styl, uint32 hint, uint32 val);
-extern void glk_stylehint_clear(uint32 wintype, uint32 styl, uint32 hint);
-extern uint32 glk_style_distinguish(winid_t win, uint32 styl1, uint32 styl2);
-extern uint32 glk_style_measure(winid_t win, uint32 styl, uint32 hint, uint32 *result);
+extern void glk_stylehint_set(glui32 wintype, glui32 styl, glui32 hint, 
+    glsi32 val);
+extern void glk_stylehint_clear(glui32 wintype, glui32 styl, glui32 hint);
+extern glui32 glk_style_distinguish(winid_t win, glui32 styl1, glui32 styl2);
+extern glui32 glk_style_measure(winid_t win, glui32 styl, glui32 hint, 
+    glui32 *result);
 
-extern frefid_t glk_fileref_create_temp(uint32 usage, uint32 rock);
-extern frefid_t glk_fileref_create_by_name(uint32 usage, char *name,
-    uint32 rock);
-extern frefid_t glk_fileref_create_by_prompt(uint32 usage, uint32 fmode,
-    uint32 rock);
+extern frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock);
+extern frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
+    glui32 rock);
+extern frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
+    glui32 rock);
 extern void glk_fileref_destroy(frefid_t fref); 
-extern frefid_t glk_fileref_iterate(frefid_t fref, uint32 *rockptr); 
-extern uint32 glk_fileref_get_rock(frefid_t fref);
+extern frefid_t glk_fileref_iterate(frefid_t fref, glui32 *rockptr); 
+extern glui32 glk_fileref_get_rock(frefid_t fref);
 extern void glk_fileref_delete_file(frefid_t fref); 
-extern uint32 glk_fileref_does_file_exist(frefid_t fref); 
+extern glui32 glk_fileref_does_file_exist(frefid_t fref); 
 
 extern void glk_select(event_t *event);
+extern void glk_select_poll(event_t *event);
 
-extern void glk_request_timer_events(uint32 millisecs); 
+extern void glk_request_timer_events(glui32 millisecs); 
 
-extern void glk_request_line_event(winid_t win, void *buf, uint32 maxlen,
-    uint32 initlen);
+extern void glk_request_line_event(winid_t win, void *buf, glui32 maxlen,
+    glui32 initlen);
 extern void glk_request_char_event(winid_t win);
 extern void glk_request_mouse_event(winid_t win); 
 

@@ -19,7 +19,7 @@ chtype win_textbuffer_styleattrs[style_NUMSTYLES];
 static void final_lines(window_textbuffer_t *dwin, long beg, long end);
 static long find_style_by_pos(window_textbuffer_t *dwin, long pos);
 static long find_line_by_pos(window_textbuffer_t *dwin, long pos);
-static void set_last_run(window_textbuffer_t *dwin, uint32 style);
+static void set_last_run(window_textbuffer_t *dwin, glui32 style);
 
 window_textbuffer_t *win_textbuffer_create(window_t *win)
 {
@@ -623,7 +623,7 @@ void win_textbuffer_putchar(window_t *win, char ch)
     }
 }
 
-static void set_last_run(window_textbuffer_t *dwin, uint32 style)
+static void set_last_run(window_textbuffer_t *dwin, glui32 style)
 {
     long lx = dwin->numchars;
     long rx = dwin->numruns-1;
@@ -776,7 +776,7 @@ void win_textbuffer_init_line(window_t *win, char *buf, int maxlen,
     set_last_run(dwin, win->style);
     
     if (initlen) {
-        /*### set up initial text */
+        put_text(dwin, buf, initlen, dwin->incurs, 0);
     }
 }
 

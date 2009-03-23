@@ -29,7 +29,7 @@ typedef struct window_textgrid_struct {
     int inorgx, inorgy;
     int inmax;
     int incurs, inlen;
-    uint32 origstyle;
+    glui32 origstyle;
 } window_textgrid_t;
 
 extern chtype win_textgrid_styleattrs[style_NUMSTYLES];

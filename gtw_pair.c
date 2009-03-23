@@ -12,8 +12,8 @@
 #include "glkterm.h"
 #include "gtw_pair.h"
 
-window_pair_t *win_pair_create(window_t *win, uint32 method, window_t *key, 
-    uint32 size)
+window_pair_t *win_pair_create(window_t *win, glui32 method, window_t *key, 
+    glui32 size)
 {
     window_pair_t *dwin = (window_pair_t *)malloc(sizeof(window_pair_t));
     dwin->owner = win;

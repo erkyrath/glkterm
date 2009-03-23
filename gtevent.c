@@ -22,7 +22,7 @@
 static event_t *curevent = NULL; 
 
 static int halfdelay_running; /* TRUE if halfdelay() has been called. */
-static uint32 timing_msec; /* The current timed-event request, exactly as
+static glui32 timing_msec; /* The current timed-event request, exactly as
     passed to glk_request_timer_events(). */
 
 #ifdef OPT_TIMED_INPUT
@@ -31,7 +31,7 @@ static uint32 timing_msec; /* The current timed-event request, exactly as
         if timing_msec is nonzero. */
     static struct timeval next_time; 
 
-    static void add_millisec_to_time(struct timeval *tv, uint32 msec);
+    static void add_millisec_to_time(struct timeval *tv, glui32 msec);
 
 #endif /* OPT_TIMED_INPUT */
 
@@ -39,8 +39,9 @@ static uint32 timing_msec; /* The current timed-event request, exactly as
 void gli_initialize_events()
 {
     halfdelay_running = FALSE;
-    
-    glk_request_timer_events(0);
+    timing_msec = 0;
+
+    gli_set_halfdelay();
 }
 
 void glk_select(event_t *event)
@@ -71,6 +72,16 @@ void glk_select(event_t *event)
 
         /* key == ERR; it's an idle event */
         
+#ifdef OPT_USE_SIGNALS
+
+        /* Check to see if the program has just resumed. This 
+            flag is set by the SIGCONT signal handler. */
+        if (just_resumed) {
+            just_resumed = FALSE;
+            needrefresh = TRUE;
+            continue;
+        }
+
 #ifdef OPT_WINCHANGED_SIGNAL
         /* Check to see if the screen-size has changed. The 
             screen_size_changed flag is set by the SIGWINCH signal
@@ -82,6 +93,8 @@ void glk_select(event_t *event)
             continue;
         }
 #endif /* OPT_WINCHANGED_SIGNAL */
+
+#endif /* OPT_USE_SIGNALS */
 
 #ifdef OPT_TIMED_INPUT
         /* Check to see if we've passed next_time. */
@@ -105,10 +118,69 @@ void glk_select(event_t *event)
     curevent = NULL;
 }
 
+void glk_select_poll(event_t *event)
+{
+    int firsttime = TRUE;
+    
+    curevent = event;
+    gli_event_clearevent(curevent);
+    
+    gli_windows_update();
+    
+    /* Now we check, once, all the stuff that glk_select() checks
+        periodically. This includes rearrange events and timer events. 
+       Yes, this looks like a loop, but that's just so we can use
+        continue; it executes exactly once. */
+        
+    while (firsttime) {
+        firsttime = FALSE;
+
+        gli_windows_place_cursor();
+        refresh();
+        
+#ifdef OPT_USE_SIGNALS
+
+        /* We don't need to check to see if the program has just resumed. 
+            The only reason glk_select() does that is to refresh the screen,
+            and that's just been done anyhow. */
+
+#ifdef OPT_WINCHANGED_SIGNAL
+        /* Check to see if the screen-size has changed. The 
+            screen_size_changed flag is set by the SIGWINCH signal
+            handler. */
+        if (screen_size_changed) {
+            screen_size_changed = FALSE;
+            gli_windows_size_change();
+            continue;
+        }
+#endif /* OPT_WINCHANGED_SIGNAL */
+
+#endif /* OPT_USE_SIGNALS */
+
+#ifdef OPT_TIMED_INPUT
+        /* Check to see if we've passed next_time. */
+        if (timing_msec) {
+            struct timeval tv;
+            gettimeofday(&tv, NULL);
+            if (tv.tv_sec > next_time.tv_sec
+                || (tv.tv_sec == next_time.tv_sec &&
+                    tv.tv_usec > next_time.tv_usec)) {
+                next_time = tv;
+                add_millisec_to_time(&next_time, timing_msec);
+                gli_event_store(evtype_Timer, NULL, 0, 0);
+                continue;
+            }
+        }
+#endif /* OPT_TIMED_INPUT */
+    }
+
+    curevent = NULL;
+}
+
 /* Various modules can call this to indicate that an event has occurred.
     This doesn't try to queue events, but since a single keystroke or
     idle event can only cause one event at most, this is fine. */
-void gli_event_store(uint32 type, window_t *win, uint32 val1, uint32 val2)
+void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2)
 {
     if (curevent) {
         curevent->type = type;
@@ -119,6 +191,12 @@ void gli_event_store(uint32 type, window_t *win, uint32 val1, uint32 val2)
         curevent->val1 = val1;
         curevent->val2 = val2;
     }
+}
+
+void glk_request_timer_events(glui32 millisecs)
+{
+    timing_msec = millisecs;
+    gli_set_halfdelay();
 }
 
 /* The timed-input handling is a little obscure. This is because curses.h
@@ -142,11 +220,14 @@ void gli_event_store(uint32 type, window_t *win, uint32 val1, uint32 val2)
     timer events. We use a timeout of half a second in this case. 
 */
     
-void glk_request_timer_events(uint32 millisecs)
+void gli_set_halfdelay()
 {
-    int delay;
+    /* If there's no timed input, we don't call halfdelay() at all. Not
+        a bit. */
     
-    timing_msec = millisecs;
+#ifdef OPT_TIMED_INPUT
+
+    int delay;
     
     if (timing_msec == 0) {
         /* turn off */
@@ -155,8 +236,6 @@ void glk_request_timer_events(uint32 millisecs)
     }
     else {
         /* turn on */
-    
-#ifdef OPT_TIMED_INPUT
         halfdelay_running = TRUE;
         
         gettimeofday(&next_time, NULL);
@@ -167,30 +246,25 @@ void glk_request_timer_events(uint32 millisecs)
         else
             delay = 1;
             
-#else /* !OPT_TIMED_INPUT */
-
-        /* Can't really turn on timing, so pretend it was turned off. */
-        if (halfdelay_running)
-            delay = 100; /* ten seconds */
-
-#endif /* OPT_TIMED_INPUT */
     }
 
-#ifdef OPT_WINCHANGED_SIGNAL
+#ifdef OPT_USE_SIGNALS
     if (!halfdelay_running || delay > 5) {
         halfdelay_running = TRUE;
         delay = 5; /* half a second */
     }
-#endif /* OPT_WINCHANGED_SIGNAL */
+#endif /* OPT_USE_SIGNALS */
 
     if (halfdelay_running)
         halfdelay(delay);
+
+#endif /* OPT_TIMED_INPUT */
 }
 
 #ifdef OPT_TIMED_INPUT
 
 /* Given a time value, add a fixed delay to it. */
-static void add_millisec_to_time(struct timeval *tv, uint32 msec)
+static void add_millisec_to_time(struct timeval *tv, glui32 msec)
 {
     int sec;
     
@@ -207,3 +281,4 @@ static void add_millisec_to_time(struct timeval *tv, uint32 msec)
 }
 
 #endif /* OPT_TIMED_INPUT */
+

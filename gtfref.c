@@ -21,7 +21,7 @@
 /* Linked list of all filerefs */
 static fileref_t *gli_filereflist = NULL; 
 
-fileref_t *gli_new_fileref(char *filename, uint32 usage, uint32 rock)
+fileref_t *gli_new_fileref(char *filename, glui32 usage, glui32 rock)
 {
     fileref_t *fref = (fileref_t *)malloc(sizeof(fileref_t));
     if (!fref)
@@ -78,7 +78,7 @@ void glk_fileref_destroy(frefid_t id)
     gli_delete_fileref(fref);
 }
 
-frefid_t glk_fileref_create_temp(uint32 usage, uint32 rock)
+frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
 {
     char *filename;
     fileref_t *fref;
@@ -98,8 +98,8 @@ frefid_t glk_fileref_create_temp(uint32 usage, uint32 rock)
     return FilerefToID(fref);
 }
 
-frefid_t glk_fileref_create_by_name(uint32 usage, char *name,
-    uint32 rock)
+frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
+    glui32 rock)
 {
     fileref_t *fref;
     char buf[256];
@@ -146,8 +146,8 @@ frefid_t glk_fileref_create_by_name(uint32 usage, char *name,
     return FilerefToID(fref);
 }
 
-frefid_t glk_fileref_create_by_prompt(uint32 usage, uint32 fmode,
-    uint32 rock)
+frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
+    glui32 rock)
 {
     fileref_t *fref;
     struct stat sbuf;
@@ -240,7 +240,7 @@ frefid_t glk_fileref_create_by_prompt(uint32 usage, uint32 fmode,
     return FilerefToID(fref);
 }
 
-frefid_t glk_fileref_iterate(frefid_t id, uint32 *rockptr)
+frefid_t glk_fileref_iterate(frefid_t id, glui32 *rockptr)
 {
     fileref_t *fref;
 
@@ -276,7 +276,7 @@ frefid_t glk_fileref_iterate(frefid_t id, uint32 *rockptr)
     }
 }
 
-uint32 glk_fileref_get_rock(frefid_t id)
+glui32 glk_fileref_get_rock(frefid_t id)
 {
     fileref_t *fref;
 
@@ -288,7 +288,7 @@ uint32 glk_fileref_get_rock(frefid_t id)
     return fref->rock;
 }
 
-uint32 glk_fileref_does_file_exist(frefid_t id)
+glui32 glk_fileref_does_file_exist(frefid_t id)
 {
     fileref_t *fref;
     struct stat buf;

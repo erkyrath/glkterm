@@ -1,7 +1,7 @@
 /* main.c: Top-level source file
         for GlkTerm, curses.h implementation of the Glk API.
-    GlkTerm Library: version 0.1 alpha.
-    Glk API which this implements: version 0.3.
+    GlkTerm Library: version 0.2 alpha.
+    Glk API which this implements: version 0.4.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.edoc.com/zarf/glk/index.html
 */
@@ -40,16 +40,16 @@ int main(int argc, char *argv[])
     
     /* Test for compile-time errors. If one of these spouts off, you
         must edit glk.h and recompile. */
-    if (sizeof(uint32) != 4) {
-        printf("Compile-time error: uint32 is not a 32-bit value. Please fix glk.h.\n");
+    if (sizeof(glui32) != 4) {
+        printf("Compile-time error: glui32 is not a 32-bit value. Please fix glk.h.\n");
         return 1;
     }
-    if ((uint32)(-1) < 0) {
-        printf("Compile-time error: uint32 is not unsigned. Please fix glk.h.\n");
+    if ((glui32)(-1) < 0) {
+        printf("Compile-time error: glui32 is not unsigned. Please fix glk.h.\n");
         return 1;
     }
     if (sizeof(window_t *) > 4) {
-        printf("Compile-time error: Pointers cannot fit in a uint32. Start writing hashtable code.\n");
+        printf("Compile-time error: Pointers cannot fit in a glui32. Start writing hashtable code.\n");
         return 1;
     }
     
@@ -118,13 +118,7 @@ int main(int argc, char *argv[])
     
     /* We now start up curses. From now on, the program must exit through
         glk_exit(), so that endwin() is called. */
-    initscr();
-    cbreak();
-    noecho();
-    nonl(); 
-    intrflush(stdscr, FALSE); 
-    keypad(stdscr, TRUE);
-    scrollok(stdscr, FALSE);
+    gli_setup_curses();
     
     /* Initialize things. */
     gli_initialize_misc();

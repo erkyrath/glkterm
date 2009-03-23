@@ -24,7 +24,7 @@ static stream_t *gli_streamlist = NULL; /* linked list of all streams */
 static stream_t *gli_currentstr = NULL; /* the current output stream */
 
 stream_t *gli_new_stream(int type, int readable, int writable, 
-    uint32 rock)
+    glui32 rock)
 {
     stream_t *str = (stream_t *)malloc(sizeof(stream_t));
     if (!str)
@@ -138,8 +138,8 @@ void gli_streams_close_all()
     }
 }
 
-strid_t glk_stream_open_memory(void *buf, uint32 buflen, uint32 fmode, 
-    uint32 rock)
+strid_t glk_stream_open_memory(void *buf, glui32 buflen, glui32 fmode, 
+    glui32 rock)
 {
     stream_t *str;
     
@@ -186,8 +186,8 @@ stream_t *gli_stream_open_window(window_t *win)
     return str;
 }
 
-strid_t glk_stream_open_file(frefid_t frefid, uint32 fmode,
-    uint32 rock)
+strid_t glk_stream_open_file(frefid_t frefid, glui32 fmode,
+    glui32 rock)
 {
     char modestr[16];
     fileref_t *fref;
@@ -238,7 +238,7 @@ strid_t glk_stream_open_file(frefid_t frefid, uint32 fmode,
     return StreamToID(str);
 }
 
-strid_t glk_stream_iterate(strid_t id, uint32 *rockptr)
+strid_t glk_stream_iterate(strid_t id, glui32 *rockptr)
 {
     stream_t *str;
 
@@ -274,7 +274,7 @@ strid_t glk_stream_iterate(strid_t id, uint32 *rockptr)
     }
 }
 
-uint32 glk_stream_get_rock(strid_t id)
+glui32 glk_stream_get_rock(strid_t id)
 {
     stream_t *str;
 
@@ -317,7 +317,7 @@ strid_t glk_stream_get_current()
         return 0;
 }
 
-void glk_stream_set_position(strid_t id, uint32 pos, uint32 seekmode)
+void glk_stream_set_position(strid_t id, glsi32 pos, glui32 seekmode)
 {
     stream_t *str;
     
@@ -337,7 +337,7 @@ void glk_stream_set_position(strid_t id, uint32 pos, uint32 seekmode)
             else {
                 /* pos = pos */
             }
-            if ((long)pos < 0)
+            if (pos < 0)
                 pos = 0;
             if (pos > (str->bufeof - str->buf))
                 pos = (str->bufeof - str->buf);
@@ -354,7 +354,7 @@ void glk_stream_set_position(strid_t id, uint32 pos, uint32 seekmode)
     }   
 }
 
-uint32 glk_stream_get_position(strid_t id)
+glui32 glk_stream_get_position(strid_t id)
 {
     stream_t *str;
     
@@ -405,9 +405,9 @@ static void gli_put_char(stream_t *str, unsigned char ch)
     }
 }
 
-static void gli_put_buffer(stream_t *str, char *buf, uint32 len)
+static void gli_put_buffer(stream_t *str, char *buf, glui32 len)
 {
-    uint32 lx;
+    glui32 lx;
     char *cx;
     
     if (!str || !str->writable)
@@ -453,7 +453,7 @@ static void gli_put_buffer(stream_t *str, char *buf, uint32 len)
     }
 }
 
-static void gli_set_style(stream_t *str, uint32 val)
+static void gli_set_style(stream_t *str, glui32 val)
 {
     if (!str || !str->writable)
         return;
@@ -470,7 +470,7 @@ static void gli_set_style(stream_t *str, uint32 val)
     }
 }
 
-void gli_stream_echo_line(stream_t *str, char *buf, uint32 len)
+void gli_stream_echo_line(stream_t *str, char *buf, glui32 len)
 {
     /* This is only used to echo line input to an echo stream. See
         the line input methods in gtw_grid and gtw_buf. */
@@ -478,7 +478,7 @@ void gli_stream_echo_line(stream_t *str, char *buf, uint32 len)
     gli_put_char(str, '\n');
 }
 
-static uint32 gli_get_char(stream_t *str)
+static glui32 gli_get_char(stream_t *str)
 {
     if (!str || !str->readable)
         return -1;
@@ -498,13 +498,105 @@ static uint32 gli_get_char(stream_t *str)
         case strtype_File: {
             int res;
             res = getc(str->file);
-            if (res != -1)
+            if (res != -1) {
                 str->readcount++;
-            return (uint32)res;
+                return (glui32)res;
+            }
+            else {
+                return -1;
+            }
             }
         case strtype_Window:
         default:
             return -1;
+    }
+}
+
+static glui32 gli_get_buffer(stream_t *str, char *buf, glui32 len)
+{
+    if (!str || !str->readable)
+        return 0;
+    
+    switch (str->type) {
+        case strtype_Memory:
+            if (str->bufptr >= str->bufend) {
+                len = 0;
+            }
+            else {
+                if (str->bufptr + len > str->bufend) {
+                    glui32 lx;
+                    lx = (str->bufptr + len) - str->bufend;
+                    if (lx < len)
+                        len -= lx;
+                    else
+                        len = 0;
+                }
+            }
+            if (len) {
+                memcpy(buf, str->bufptr, len);
+                str->bufptr += len;
+                if (str->bufptr > str->bufeof)
+                    str->bufeof = str->bufptr;
+            }
+            str->readcount += len;
+            return len;
+        case strtype_File: {
+            glui32 res;
+            res = fread(buf, 1, len, str->file);
+            str->readcount += res;
+            return res;
+            }
+        case strtype_Window:
+        default:
+            return 0;
+    }
+}
+
+static glui32 gli_get_line(stream_t *str, char *buf, glui32 len)
+{
+    glui32 lx;
+    int gotnewline;
+
+    if (!str || !str->readable)
+        return 0;
+    
+    switch (str->type) {
+        case strtype_Memory:
+            if (len == 0)
+                return 0;
+            len -= 1; /* for the terminal null */
+            if (str->bufptr >= str->bufend) {
+                len = 0;
+            }
+            else {
+                if (str->bufptr + len > str->bufend) {
+                    lx = (str->bufptr + len) - str->bufend;
+                    if (lx < len)
+                        len -= lx;
+                    else
+                        len = 0;
+                }
+            }
+            gotnewline = FALSE;
+            for (lx=0; lx<len && !gotnewline; lx++) {
+                buf[lx] = str->bufptr[lx];
+                gotnewline = (buf[lx] == '\n');
+            }
+            buf[lx] = '\0';
+            str->bufptr += lx;
+            str->readcount += lx;
+            return lx;
+        case strtype_File: {
+            char *res;
+            res = fgets(buf, len, str->file);
+            if (!res)
+                return 0;
+            else
+                return strlen(buf);
+            }
+        case strtype_Window:
+        default:
+            return 0;
     }
 }
 
@@ -538,12 +630,12 @@ void glk_put_string_stream(strid_t id, char *s)
     gli_put_buffer(str, s, strlen(s));
 }
 
-void glk_put_buffer(char *buf, uint32 len)
+void glk_put_buffer(char *buf, glui32 len)
 {
     gli_put_buffer(gli_currentstr, buf, len);
 }
 
-void glk_put_buffer_stream(strid_t id, char *buf, uint32 len)
+void glk_put_buffer_stream(strid_t id, char *buf, glui32 len)
 {
     stream_t *str;
     if (!id || !(str = IDToStream(id))) {
@@ -553,12 +645,12 @@ void glk_put_buffer_stream(strid_t id, char *buf, uint32 len)
     gli_put_buffer(str, buf, len);
 }
 
-void glk_set_style(uint32 val)
+void glk_set_style(glui32 val)
 {
     gli_set_style(gli_currentstr, val);
 }
 
-void glk_set_style_stream(strid_t id, uint32 val)
+void glk_set_style_stream(strid_t id, glui32 val)
 {
     stream_t *str;
     if (!id || !(str = IDToStream(id))) {
@@ -568,7 +660,7 @@ void glk_set_style_stream(strid_t id, uint32 val)
     gli_set_style(str, val);
 }
 
-uint32 glk_get_char_stream(strid_t id)
+glui32 glk_get_char_stream(strid_t id)
 {
     stream_t *str;
     if (!id || !(str = IDToStream(id))) {
@@ -576,5 +668,25 @@ uint32 glk_get_char_stream(strid_t id)
         return -1;
     }
     return gli_get_char(str);
+}
+
+glui32 glk_get_line_stream(strid_t id, char *buf, glui32 len)
+{
+    stream_t *str;
+    if (!id || !(str = IDToStream(id))) {
+        gli_strict_warning("get_line_stream: invalid id");
+        return -1;
+    }
+    return gli_get_line(str, buf, len);
+}
+
+glui32 glk_get_buffer_stream(strid_t id, char *buf, glui32 len)
+{
+    stream_t *str;
+    if (!id || !(str = IDToStream(id))) {
+        gli_strict_warning("get_buffer_stream: invalid id");
+        return -1;
+    }
+    return gli_get_buffer(str, buf, len);
 }
 

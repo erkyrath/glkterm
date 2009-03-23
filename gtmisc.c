@@ -61,8 +61,12 @@ void glk_exit()
 
 void glk_set_interrupt_handler(void (*func)(void))
 {
-    /* ### I have not yet coded this; it will be heavily OS-specific, 
-        anyway. */
+    gli_interrupt_handler = func;
+}
+
+void glk_tick()
+{
+    /* Nothing to do here. */
 }
 
 unsigned char glk_char_to_lower(unsigned char ch)

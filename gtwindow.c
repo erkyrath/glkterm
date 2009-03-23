@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef OPT_WINCHANGED_SIGNAL
+#ifdef OPT_USE_SIGNALS
 #include <signal.h>
-#endif /* OPT_WINCHANGED_SIGNAL */
+#endif /* OPT_USE_SIGNALS */
 
 #include <curses.h>
 #include "glk.h"
@@ -36,12 +36,22 @@ window_t *gli_focuswin = NULL; /* The window selected by the player.
 /* This is the screen region which is enclosed by the root window. */
 grect_t content_box;
 
+void (*gli_interrupt_handler)(void) = NULL;
+
 static void compute_content_box(void);
 
+#ifdef OPT_USE_SIGNALS
+
+    int just_resumed;
+    static void sigresume(int val);
+    static void siginterrupt(int val);
+
 #ifdef OPT_WINCHANGED_SIGNAL
-int screen_size_changed;
-static void sigwinsize(int val);
+        int screen_size_changed;
+        static void sigwinsize(int val);
 #endif /* OPT_WINCHANGED_SIGNAL */
+
+#endif /* OPT_USE_SIGNALS */
 
 /* Set up the window system. This is called from main(). */
 void gli_initialize_windows()
@@ -63,7 +73,7 @@ void gli_initialize_windows()
             val |= A_UNDERLINE;
         if (ix == style_Alert)
             val |= A_REVERSE;
-        if (ix == style_Header || ix == style_Subheader)
+        if (ix == style_Header || ix == style_Subheader || ix == style_Input)
             val |= A_BOLD;
         
         win_textbuffer_styleattrs[ix] = val;
@@ -75,14 +85,79 @@ void gli_initialize_windows()
     /* Figure out the screen size. */
     compute_content_box();
     
+#ifdef OPT_USE_SIGNALS
+
+        just_resumed = FALSE;
+        signal(SIGCONT, &sigresume);
+        signal(SIGHUP, &siginterrupt);
+        signal(SIGINT, &siginterrupt);
+
 #ifdef OPT_WINCHANGED_SIGNAL
-    screen_size_changed = FALSE;
-    signal(SIGWINCH, &sigwinsize);
+            screen_size_changed = FALSE;
+            signal(SIGWINCH, &sigwinsize);
 #endif /* OPT_WINCHANGED_SIGNAL */
+
+#endif /* OPT_USE_SIGNALS */
 
     /* Draw the initial setup (no windows) */
     gli_windows_redraw();
 }
+
+/* Set up all the curses parameters. This is called from main() -- 
+    before gli_initialize_windows, actually -- and also when curses
+    is reinitialized for a screen-size change. */
+void gli_setup_curses()
+{
+    initscr();
+    cbreak();
+    noecho();
+    nonl(); 
+    intrflush(stdscr, FALSE); 
+    keypad(stdscr, TRUE);
+    scrollok(stdscr, FALSE);
+}
+
+#ifdef OPT_USE_SIGNALS
+
+/* Signal handler for SIGCONT. */
+static void sigresume(int val)
+{
+    signal(SIGCONT, &sigresume);
+    just_resumed = TRUE;
+    gli_set_halfdelay();
+}
+
+/* Signal handler for SIGINT. */
+static void siginterrupt(int val)
+{
+    /* I don't know if re-entrancy is a problem, but we might as
+        well avoid it. */
+    void (*func)(void) = gli_interrupt_handler;
+    gli_interrupt_handler = NULL;
+
+    if (func) {
+        (*func)();
+    }
+}
+
+#ifdef OPT_WINCHANGED_SIGNAL
+
+/* Signal handler for SIGWINCH. */
+static void sigwinsize(int val)
+{
+    endwin();
+
+    newterm(getenv("TERM"), stdout, stdin);
+    gli_setup_curses();
+    gli_set_halfdelay();
+
+    screen_size_changed = TRUE;
+    signal(SIGWINCH, &sigwinsize);
+}
+
+#endif /* OPT_WINCHANGED_SIGNAL */
+
+#endif /* OPT_USE_SIGNALS */
 
 static void compute_content_box()
 {
@@ -110,18 +185,7 @@ static void compute_content_box()
         content_box.bottom--; /* allow a message line */
 }
 
-#ifdef OPT_WINCHANGED_SIGNAL
-
-/* Signal handler for SIGWINCH. */
-static void sigwinsize(int val)
-{
-    screen_size_changed = TRUE;
-    signal(SIGWINCH, &sigwinsize);
-}
-
-#endif /* OPT_WINCHANGED_SIGNAL */
-
-window_t *gli_new_window(uint32 type, uint32 rock)
+window_t *gli_new_window(glui32 type, glui32 rock)
 {
     window_t *win = (window_t *)malloc(sizeof(window_t));
     if (!win)
@@ -172,13 +236,13 @@ void gli_delete_window(window_t *win)
     free(win);
 }
 
-winid_t glk_window_open(winid_t split, uint32 method, uint32 size, 
-    uint32 wintype, uint32 rock)
+winid_t glk_window_open(winid_t split, glui32 method, glui32 size, 
+    glui32 wintype, glui32 rock)
 {
     window_t *splitwin, *newwin, *pairwin, *oldparent;
     window_pair_t *dpairwin;
     grect_t box;
-    uint32 val;
+    glui32 val;
     
     if (!gli_rootwin) {
         if (split) {
@@ -446,12 +510,12 @@ void glk_window_close(winid_t id, stream_result_t *result)
     }
 }
 
-void glk_window_get_arrangement(winid_t id, uint32 *method, uint32 *size, 
+void glk_window_get_arrangement(winid_t id, glui32 *method, glui32 *size, 
     winid_t *keywin_id)
 {
     window_t *win;
     window_pair_t *dwin;
-    uint32 val;
+    glui32 val;
     
     if (!id || !(win = IDToWindow(id))) {
         gli_strict_warning("window_get_arrangement: invalid id");
@@ -479,13 +543,13 @@ void glk_window_get_arrangement(winid_t id, uint32 *method, uint32 *size,
         *method = val;
 }
 
-void glk_window_set_arrangement(winid_t id, uint32 method, uint32 size, 
+void glk_window_set_arrangement(winid_t id, glui32 method, glui32 size, 
     winid_t keywin_id)
 {
     window_t *win;
     window_t *key;
     window_pair_t *dwin;
-    uint32 newdir;
+    glui32 newdir;
     grect_t box;
     int newvertical, newbackward;
     
@@ -566,7 +630,7 @@ void glk_window_set_arrangement(winid_t id, uint32 method, uint32 size,
     gli_window_redraw(win);
 }
 
-winid_t glk_window_iterate(winid_t id, uint32 *rockptr)
+winid_t glk_window_iterate(winid_t id, glui32 *rockptr)
 {
     window_t *win;
 
@@ -636,7 +700,7 @@ window_t *gli_window_iterate_treeorder(window_t *win)
     }
 }
 
-uint32 glk_window_get_rock(winid_t id)
+glui32 glk_window_get_rock(winid_t id)
 {
     window_t *win;
 
@@ -669,11 +733,22 @@ winid_t glk_window_get_parent(winid_t id)
         return 0;
 }
 
-void glk_window_get_size(winid_t id, uint32 *width, uint32 *height)
+glui32 glk_window_get_type(winid_t id)
 {
     window_t *win;
-    uint32 wid = 0;
-    uint32 hgt = 0;
+
+    if (!id || !(win = IDToWindow(id))) {
+        gli_strict_warning("window_get_parent: invalid id");
+        return 0;
+    }
+    return win->type;
+}
+
+void glk_window_get_size(winid_t id, glui32 *width, glui32 *height)
+{
+    window_t *win;
+    glui32 wid = 0;
+    glui32 hgt = 0;
     
     if (!id || !(win = IDToWindow(id))) {
         gli_strict_warning("window_get_size: invalid id");
@@ -915,8 +990,8 @@ void glk_request_char_event(winid_t id)
     
 }
 
-void glk_request_line_event(winid_t id, void *buf, uint32 maxlen, 
-    uint32 initlen)
+void glk_request_line_event(winid_t id, void *buf, glui32 maxlen, 
+    glui32 initlen)
 {
     window_t *win;
     
@@ -944,6 +1019,20 @@ void glk_request_line_event(winid_t id, void *buf, uint32 maxlen,
             break;
     }
     
+}
+
+void glk_request_mouse_event(winid_t id)
+{
+    window_t *win;
+    
+    if (!id || !(win = IDToWindow(id))) {
+        gli_strict_warning("request_mouse_event: invalid id");
+        return;
+    }
+    
+    /* But, in fact, we can't do much about this. */
+    
+    return;
 }
 
 void glk_cancel_char_event(winid_t id)
@@ -999,6 +1088,20 @@ void glk_cancel_line_event(winid_t id, event_t *ev)
     }
 }
 
+void glk_cancel_mouse_event(winid_t id)
+{
+    window_t *win;
+    
+    if (!id || !(win = IDToWindow(id))) {
+        gli_strict_warning("cancel_mouse_event: invalid id");
+        return;
+    }
+    
+    /* But, in fact, we can't do much about this. */
+    
+    return;
+}
+
 void gli_window_put_char(window_t *win, char ch)
 {
     /* ### character set conversion will go here. */
@@ -1037,7 +1140,7 @@ void glk_window_clear(winid_t id)
     }
 }
 
-void glk_window_move_cursor(winid_t id, uint32 xpos, uint32 ypos)
+void glk_window_move_cursor(winid_t id, glui32 xpos, glui32 ypos)
 {
     window_t *win;
     

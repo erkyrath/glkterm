@@ -78,7 +78,7 @@ typedef struct window_textbuffer_struct {
     int inmax;
     long infence;
     long incurs;
-    uint32 origstyle;
+    glui32 origstyle;
     
 } window_textbuffer_t;
 

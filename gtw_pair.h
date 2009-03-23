@@ -15,17 +15,17 @@ typedef struct window_pair_struct {
     int splitwidth; /* The width of the border. Zero or one. */
     
     /* split info... */
-    uint32 dir; /* winmethod_Left, Right, Above, or Below */
+    glui32 dir; /* winmethod_Left, Right, Above, or Below */
     int vertical, backward; /* flags */
-    uint32 division; /* winmethod_Fixed or winmethod_Proportional */
+    glui32 division; /* winmethod_Fixed or winmethod_Proportional */
     window_t *key; /* NULL or a leaf-descendant (not a Pair) */
     int keydamage; /* used as scratch space in window closing */
-    uint32 size; /* size value */
+    glui32 size; /* size value */
     
 } window_pair_t;
 
-extern window_pair_t *win_pair_create(window_t *win, uint32 method, 
-    window_t *key, uint32 size);
+extern window_pair_t *win_pair_create(window_t *win, glui32 method, 
+    window_t *key, glui32 size);
 extern void win_pair_destroy(window_pair_t *dwin);
 extern void win_pair_rearrange(window_t *win, grect_t *box);
 extern void win_pair_redraw(window_t *win);

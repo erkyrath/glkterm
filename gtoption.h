@@ -16,7 +16,7 @@
 
 /* Options: */
 
-#define LIBRARY_VERSION "0.1 alpha"
+#define LIBRARY_VERSION "0.2 alpha"
 #define LIBRARY_PORT "Generic"
 
 /* If you change this code substantially, you should change the
@@ -34,21 +34,6 @@
     source.
 */  
 
-#define OPT_WINCHANGED_SIGNAL
-
-/* OPT_WINCHANGED_SIGNAL should be defined if your OS sends a
-    SIGWINCH signal whenever the window size changes. If this
-    is defined, GlkTerm will call signal() to set a handler for
-    SIGWINCH, and rearrange the screen properly when the window
-    is resized. If this is not defined, GlkTerm will think that
-    the window size is fixed, and not watch for changes.
-   This should generally be defined; comment it out only if your
-    OS does not define signal() or SIGWINCH.
-   OPT_WINCHANGED_SIGNAL will be ignored unless OPT_TIMED_INPUT
-    is also defined. This is because GlkTerm has to check
-    periodically to see if it's time to rearrange the screen.
-*/
-
 #define OPT_TIMED_INPUT
 
 /* OPT_TIMED_INPUT should be defined if your OS allows timed
@@ -60,6 +45,38 @@
     sys/time.h. If your OS does not support gettimeofday(), you
     will have to comment this option out, unless you want to hack
     gtevent.c to use a different time API.
+*/
+
+#define OPT_USE_SIGNALS
+
+/* OPT_USE_SIGNALS should be defined if your OS uses SIGINT, SIGHUP,
+    SIGTSTP and SIGCONT signals when the program is interrupted, paused, 
+    and resumed. This will likely be true on all Unix systems. (With the
+    ctrl-C, ctrl-Z and "fg" commands.)
+   If this is defined, GlkTerm will call signal() to set a handler
+    for SIGINT and SIGHUP, so that glk_set_interrupt_handler() will work
+    right. GlkTerm will also set a handler for SIGCONT, and redraw the
+    screen after you resume the program. If this is not defined, GlkTerm
+    will not run Glk interrupt handlers, and may not redraw the screen
+    until a key is hit.
+   The pause/resume (redrawing) functionality will be ignored unless
+    OPT_TIMED_INPUT is also defined. This is because GlkTerm has to
+    check periodically to see if it's time to redraw the screen. (Not
+    the greatest solution, but it works.)
+*/
+
+#define OPT_WINCHANGED_SIGNAL
+
+/* OPT_WINCHANGED_SIGNAL should be defined if your OS sends a
+    SIGWINCH signal whenever the window size changes. If this
+    is defined, GlkTerm will call signal() to set a handler for
+    SIGWINCH, and rearrange the screen properly when the window
+    is resized. If this is not defined, GlkTerm will think that
+    the window size is fixed, and not watch for changes.
+   This should generally be defined; comment it out only if your
+    OS does not define SIGWINCH.
+   OPT_WINCHANGED_SIGNAL will be ignored unless OPT_USE_SIGNALS
+    is also defined.
 */
 
 /* #define NO_MEMMOVE */

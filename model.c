@@ -1,6 +1,6 @@
 #include "glk.h"
 
-/* model.c: Model program for Glk API, version 0.3.
+/* model.c: Model program for Glk API, version 0.4.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.edoc.com/zarf/glk/index.html
     This program is in the public domain.
@@ -81,7 +81,7 @@ void glk_main(void)
         3, wintype_TextGrid, 0);
 
     glk_put_string("Model Glk Program\nAn Interactive Model Glk Program\n");
-    glk_put_string("By Andrew Plotkin.\nRelease 4.\n");
+    glk_put_string("By Andrew Plotkin.\nRelease 5.\n");
     glk_put_string("Type \"help\" for a list of commands.\n");
     
     current_room = 0; /* Set initial location. */
@@ -208,7 +208,7 @@ void glk_main(void)
 static void draw_statuswin(void)
 {
     char *roomname;
-    uint32 width, height;
+    glui32 width, height;
     
     if (!statuswin) {
         /* It is possible that the window was not successfully 
@@ -244,7 +244,7 @@ static void draw_statuswin(void)
 static int yes_or_no(void)
 {
     char commandbuf[256];
-    char *cx, *cmd;
+    char *cx;
     int gotline, len;
     event_t ev;
     
@@ -447,7 +447,7 @@ static void verb_save(void)
     
     /* Write some binary data. */
     for (ix=0; ix<256; ix++) {
-        glk_put_char_stream(savestr, ix);
+        glk_put_char_stream(savestr, (unsigned char)ix);
     }
     
     glk_stream_close(savestr, NULL);
@@ -459,7 +459,7 @@ static void verb_restore(void)
 {
     int ix;
     int err;
-    uint32 ch;
+    glui32 ch;
     frefid_t saveref;
     strid_t savestr;
     
@@ -485,12 +485,12 @@ static void verb_restore(void)
     
     for (ix=0; ix<256; ix++) {
         ch = glk_get_char_stream(savestr);
-        if (ch == -1) {
+        if (ch == (glui32)(-1)) {
             glk_put_string("Unexpected end of file.\n");
             err = TRUE;
             break;
         }
-        if (ch != ix) {
+        if (ch != (glui32)ix) {
             glk_put_string("This does not appear to be a valid saved game.\n");
             err = TRUE;
             break;

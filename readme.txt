@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.1 alpha.
-Glk API which this implements: version 0.3.
+GlkTerm Library: version 0.2 alpha.
+Glk API which this implements: version 0.4.
 Designed by Andrew Plotkin <erkyrath@netcom.com>
 http://www.edoc.com/zarf/glk/index.html
 
@@ -81,6 +81,11 @@ SunOS:
 IRIX:
     Compiles as is
 
+Unixware:
+    In the Makefile, uncomment
+        CC = cc
+    (instead of gcc)
+
 * Notes on the source code:
 
 Functions which begin with glk_ are, of course, Glk API functions. These
@@ -116,6 +121,9 @@ stat(), to implement a "Do you want to overwrite that file?" prompt.
 I have not yet tried to deal with character-set issues. The library
 assumes that all input and output characters are in Latin-1. Alpha, like
 I said.
+
+Thanks to Matt Kimball for finding information on SIGWINCH and the
+curses library.
 
 * Permissions
 

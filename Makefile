@@ -2,7 +2,7 @@
 
 # Pick a C compiler.
 #CC = cc
-CC = gcc
+CC = gcc -ansi
 
 # You may need to set directories to pick up the curses library.
 #INCLUDEDIRS = -I/usr/5include

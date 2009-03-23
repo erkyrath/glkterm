@@ -297,6 +297,15 @@ void win_textgrid_clear(window_t *win)
 void win_textgrid_move_cursor(window_t *win, int xpos, int ypos)
 {
     window_textgrid_t *dwin = win->data;
+    
+    /* If the values are negative, they're really huge positive numbers -- 
+        remember that they were cast from glui32. So set them huge and
+        let canonicalization take its course. */
+    if (xpos < 0)
+        xpos = 32767;
+    if (ypos < 0)
+        ypos = 32767;
+        
     dwin->curx = xpos;
     dwin->cury = ypos;
 }
@@ -341,8 +350,27 @@ void win_textgrid_init_line(window_t *win, char *buf, int maxlen, int initlen)
     dwin->origstyle = win->style;
     win->style = style_Input;
     
+    if (initlen > maxlen)
+        initlen = maxlen;
+        
     if (initlen) {
-        /*### set up initial text*/
+        int ix;
+        tgline_t *ln = &(dwin->lines[dwin->inorgy]);
+        
+        for (ix=0; ix<initlen; ix++) {
+            ln->attrs[dwin->inorgx+ix] = style_Input;
+            ln->chars[dwin->inorgx+ix] = buf[ix];
+        }
+        
+        setposdirty(dwin, ln, dwin->inorgx+0, dwin->inorgy);
+        if (initlen > 1) {
+            setposdirty(dwin, ln, dwin->inorgx+(initlen-1), dwin->inorgy);
+        }
+            
+        dwin->incurs += initlen;
+        dwin->inlen += initlen;
+        dwin->curx = dwin->inorgx+dwin->incurs;
+        dwin->cury = dwin->inorgy;
     }
 }
 
@@ -430,7 +458,9 @@ void gcmd_grid_insert_key(window_t *win, int arg)
     ln->chars[dwin->inorgx+dwin->incurs] = arg;
     
     setposdirty(dwin, ln, dwin->inorgx+dwin->incurs, dwin->inorgy);
-    setposdirty(dwin, ln, dwin->inorgx+dwin->inlen, dwin->inorgy);
+    if (dwin->incurs != dwin->inlen) {
+        setposdirty(dwin, ln, dwin->inorgx+dwin->inlen, dwin->inorgy);
+    }
     
     dwin->incurs++;
     dwin->inlen++;
