@@ -101,7 +101,26 @@ frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
     fref = gli_new_fileref(filename, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_temp: unable to create fileref.");
-        return 0;
+        return NULL;
+    }
+    
+    return fref;
+}
+
+frefid_t glk_fileref_create_from_fileref(glui32 usage, frefid_t oldfref,
+    glui32 rock)
+{
+    fileref_t *fref; 
+
+    if (!oldfref) {
+        gli_strict_warning("fileref_create_from_fileref: invalid ref");
+        return NULL;
+    }
+
+    fref = gli_new_fileref(oldfref->filename, usage, rock);
+    if (!fref) {
+        gli_strict_warning("fileref_create_from_fileref: unable to create fileref.");
+        return NULL;
     }
     
     return fref;
@@ -149,7 +168,7 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
     fref = gli_new_fileref(buf, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_by_name: unable to create fileref.");
-        return 0;
+        return NULL;
     }
     
     return fref;
@@ -203,7 +222,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     ix = gli_msgin_getline(prbuf, buf, 255, &val);
     if (!ix) {
         /* The player cancelled input. */
-        return 0;
+        return NULL;
     }
     
     buf[val] = '\0';
@@ -220,7 +239,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     val = strlen(cx);
     if (!val) {
         /* The player just hit return. */
-        return 0;
+        return NULL;
     }
     
     if (fmode != filemode_Read) {
@@ -229,7 +248,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
             while (1) {
                 ix = gli_msgin_getchar(prbuf, FALSE);
                 if (ix == 'n' || ix == 'N' || ix == '\033' || ix == '\007') {
-                    return 0;
+                    return NULL;
                 }
                 if (ix == 'y' || ix == 'Y') {
                     break;
@@ -243,7 +262,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     fref = gli_new_fileref(cx, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_by_prompt: unable to create fileref.");
-        return 0;
+        return NULL;
     }
     
     return fref;

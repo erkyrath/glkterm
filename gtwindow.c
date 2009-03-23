@@ -1194,3 +1194,48 @@ void gcmd_win_refresh(window_t *win, glui32 arg)
     gli_msgline_redraw();
     wrefresh(curscr);
 }
+
+#ifdef GLK_MODULE_IMAGE
+
+glui32 glk_image_draw(winid_t win, glui32 image, glsi32 val1, glsi32 val2)
+{
+    gli_strict_warning("image_draw: graphics not supported.");
+    return FALSE;
+}
+
+glui32 glk_image_draw_scaled(winid_t win, glui32 image, 
+    glsi32 val1, glsi32 val2, glui32 width, glui32 height)
+{
+    gli_strict_warning("image_draw_scaled: graphics not supported.");
+    return FALSE;
+}
+
+glui32 glk_image_get_info(glui32 image, glui32 *width, glui32 *height)
+{
+    gli_strict_warning("image_get_info: graphics not supported.");
+    return FALSE;
+}
+
+void glk_window_flow_break(winid_t win)
+{
+    gli_strict_warning("window_flow_break: graphics not supported.");
+}
+
+void glk_window_erase_rect(winid_t win, 
+    glsi32 left, glsi32 top, glui32 width, glui32 height)
+{
+    gli_strict_warning("window_erase_rect: graphics not supported.");
+}
+
+void glk_window_fill_rect(winid_t win, glui32 color, 
+    glsi32 left, glsi32 top, glui32 width, glui32 height)
+{
+    gli_strict_warning("window_fill_rect: graphics not supported.");
+}
+
+void glk_window_set_background_color(winid_t win, glui32 color)
+{
+    gli_strict_warning("window_set_background_color: graphics not supported.");
+}
+
+#endif /* GLK_MODULE_IMAGE */

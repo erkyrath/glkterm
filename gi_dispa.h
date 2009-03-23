@@ -1,16 +1,17 @@
 #ifndef _GI_DISPA_H
 #define _GI_DISPA_H
 
-/* gidispa.h: Header file for dispatch layer of Glk API, version 0.5.
+/* gi_dispa.h: Header file for dispatch layer of Glk API, version 0.52.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.eblong.com/zarf/glk/index.html
 
     This file is copyright 1998-1999 by Andrew Plotkin. You may copy,
     distribute, and incorporate it into your own programs, by any means
     and under any conditions, as long as you do not modify it. You may
-    also modify this file and incorporate it into your own programs, as
-    long as you retain a notice in your program or documentation which
-    mentions my name and the URL shown above.
+    also modify this file, incorporate it into your own programs, 
+    and distribute the modified version, as long as you retain a notice
+    in your program or documentation which mentions my name and the URL 
+    shown above.
 */
 
 /* These constants define the classes of opaque objects. It's a bit ugly
@@ -22,6 +23,7 @@
 #define gidisp_Class_Window (0)
 #define gidisp_Class_Stream (1)
 #define gidisp_Class_Fileref (2)
+#define gidisp_Class_Schannel (3)
 
 typedef union gluniversal_union {
     glui32 uint; /* Iu */
@@ -57,7 +59,7 @@ typedef union glk_objrock_union {
 
 /* The following functions are part of the Glk library itself, not the dispatch
     layer (whose code is in gi_dispa.c). These functions are necessarily
-    implemented in a platform-dependent code. 
+    implemented in platform-dependent code. 
 */
 extern void gidispatch_set_object_registry(
     gidispatch_rock_t (*regi)(void *obj, glui32 objclass), 

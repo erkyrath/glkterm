@@ -85,6 +85,11 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, void *ptr)
             return FALSE;
 #endif /* OPT_TIMED_INPUT */
             
+        case gestalt_Sound:
+        case gestalt_SoundVolume:
+        case gestalt_SoundNotify: 
+	    return FALSE;
+  
         default:
             return 0;
 

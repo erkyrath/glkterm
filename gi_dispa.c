@@ -1,13 +1,14 @@
-/* gidispa.c: Dispatch layer for Glk API, version 0.5.
+/* gi_dispa.c: Dispatch layer for Glk API, version 0.52.
     Designed by Andrew Plotkin <erkyrath@netcom.com>
     http://www.eblong.com/zarf/glk/index.html
 
     This file is copyright 1998-1999 by Andrew Plotkin. You may copy,
     distribute, and incorporate it into your own programs, by any means
     and under any conditions, as long as you do not modify it. You may
-    also modify this file and incorporate it into your own programs, as
-    long as you retain a notice in your program or documentation which
-    mentions my name and the URL shown above.
+    also modify this file, incorporate it into your own programs, 
+    and distribute the modified version, as long as you retain a notice
+    in your program or documentation which mentions my name and the URL 
+    shown above.
 */
 
 /* This code should be linked into every Glk library, without change. 
@@ -33,6 +34,8 @@ static gidispatch_intconst_t intconstant_table[] = {
     { "evtype_LineInput", (3) },
     { "evtype_MouseInput", (4) },
     { "evtype_None", (0) },
+    { "evtype_Redraw", (6) },
+    { "evtype_SoundNotify", (7) },
     { "evtype_Timer", (1) },
     { "filemode_Read", (0x02) },
     { "filemode_ReadWrite", (0x03) },
@@ -50,10 +53,22 @@ static gidispatch_intconst_t intconstant_table[] = {
     { "gestalt_CharOutput_ApproxPrint", (1) },
     { "gestalt_CharOutput_CannotPrint", (0) },
     { "gestalt_CharOutput_ExactPrint", (2) },
+    { "gestalt_DrawImage", (7) },
+    { "gestalt_Graphics", (6) },
     { "gestalt_LineInput", (2) },
     { "gestalt_MouseInput", (4) },
+    { "gestalt_Sound", (8) },
+    { "gestalt_SoundNotify", (10) },
+    { "gestalt_SoundVolume", (9) },
     { "gestalt_Timer", (5) },
     { "gestalt_Version", (0) },
+#ifdef GLK_MODULE_IMAGE
+    { "imagealign_InlineCenter",  (0x03) },
+    { "imagealign_InlineDown",  (0x02) },
+    { "imagealign_MarginLeft",  (0x04) },
+    { "imagealign_MarginRight",  (0x05) },
+    { "imagealign_InlineUp",  (0x01) },
+#endif /* GLK_MODULE_IMAGE */
     { "keycode_Delete",   (0xfffffff9) },
     { "keycode_Down",     (0xfffffffb) },
     { "keycode_End",      (0xfffffff3) },
@@ -119,6 +134,7 @@ static gidispatch_intconst_t intconstant_table[] = {
     { "winmethod_Right", (0x01)  },
     { "wintype_AllTypes", (0)  },
     { "wintype_Blank", (2)  },
+    { "wintype_Graphics", (5)  },
     { "wintype_Pair", (1)  },
     { "wintype_TextBuffer", (3) },
     { "wintype_TextGrid", (4) },
@@ -165,6 +181,7 @@ static gidispatch_function_t function_table[] = {
     { 0x0065, glk_fileref_get_rock, "fileref_get_rock" },
     { 0x0066, glk_fileref_delete_file, "fileref_delete_file" },
     { 0x0067, glk_fileref_does_file_exist, "fileref_does_file_exist" },
+    { 0x0068, glk_fileref_create_from_fileref, "fileref_create_from_fileref" },
     { 0x0080, glk_put_char, "put_char" },
     { 0x0081, glk_put_char_stream, "put_char_stream" },
     { 0x0082, glk_put_string, "put_string" },
@@ -191,11 +208,31 @@ static gidispatch_function_t function_table[] = {
     { 0x00D4, glk_request_mouse_event, "request_mouse_event" },
     { 0x00D5, glk_cancel_mouse_event, "cancel_mouse_event" },
     { 0x00D6, glk_request_timer_events, "request_timer_events" },
+#ifdef GLK_MODULE_IMAGE
+    { 0x00E0, glk_image_get_info, "image_get_info" },
+    { 0x00E1, glk_image_draw, "image_draw" },
+    { 0x00E2, glk_image_draw_scaled, "image_draw_scaled" },
+    { 0x00E8, glk_window_flow_break, "window_flow_break" },
+    { 0x00E9, glk_window_erase_rect, "window_erase_rect" },
+    { 0x00EA, glk_window_fill_rect, "window_fill_rect" },
+    { 0x00EB, glk_window_set_background_color, "window_set_background_color" },
+#endif /* GLK_MODULE_IMAGE */
+#ifdef GLK_MODULE_SOUND
+    { 0x00F0, glk_schannel_iterate, "schannel_iterate" },
+    { 0x00F1, glk_schannel_get_rock, "schannel_get_rock" },
+    { 0x00F2, glk_schannel_create, "schannel_create" },
+    { 0x00F3, glk_schannel_destroy, "schannel_destroy" },
+    { 0x00F8, glk_schannel_play, "schannel_play" },
+    { 0x00F9, glk_schannel_play_ext, "schannel_play_ext" },
+    { 0x00FA, glk_schannel_stop, "schannel_stop" },
+    { 0x00FB, glk_schannel_set_volume, "schannel_set_volume" },
+    { 0x00FC, glk_sound_load_hint, "sound_load_hint" },
+#endif /* GLK_MODULE_SOUND */
 };
 
 glui32 gidispatch_count_classes()
 {
-    return 3;
+    return 4;
 }
 
 glui32 gidispatch_count_intconst()
@@ -329,6 +366,8 @@ char *gidispatch_prototype(glui32 funcnum)
             return "1Qc:";
         case 0x0067: /* fileref_does_file_exist */
             return "2Qc:Iu";
+        case 0x0068: /* fileref_create_from_fileref */
+            return "4IuQcIu:Qc";
         case 0x0080: /* put_char */
             return "1Cu:";
         case 0x0081: /* put_char_stream */
@@ -381,7 +420,43 @@ char *gidispatch_prototype(glui32 funcnum)
             return "1Qa:";
         case 0x00D6: /* request_timer_events */
             return "1Iu:";
-            
+#ifdef GLK_MODULE_IMAGE
+        case 0x00E0: /* image_get_info */
+            return "4Iu<Iu<Iu:Iu";
+        case 0x00E1: /* image_draw */
+            return "5QaIuIsIs:Iu";
+        case 0x00E2: /* image_draw_scaled */
+            return "7QaIuIsIsIuIu:Iu";
+        case 0x00E8: /* window_flow_break */
+            return "1Qa:";
+        case 0x00E9: /* window_erase_rect */
+            return "5QaIsIsIuIu:";
+        case 0x00EA: /* window_fill_rect */
+            return "6QaIuIsIsIuIu:";
+        case 0x00EB: /* window_set_background_color */
+            return "2QaIu:";
+#endif /* GLK_MODULE_IMAGE */
+#ifdef GLK_MODULE_SOUND
+        case 0x00F0: /* schannel_iterate */
+            return "3Qd<Iu:Qd";
+        case 0x00F1: /* schannel_get_rock */
+            return "2Qd:Iu";
+        case 0x00F2: /* schannel_create */
+            return "2Iu:Qd";
+        case 0x00F3: /* schannel_destroy */
+            return "1Qd:";
+        case 0x00F8: /* schannel_play */
+            return "3QdIu:Iu";
+        case 0x00F9: /* schannel_play_ext */
+            return "5QdIuIuIu:Iu";
+        case 0x00FA: /* schannel_stop */
+            return "1Qd:";
+        case 0x00FB: /* schannel_set_volume */
+            return "2QdIu:";
+        case 0x00FC: /* sound_load_hint */
+            return "2IuIu:";
+#endif /* GLK_MODULE_SOUND */
+
         default:
             return NULL;
     }
@@ -592,6 +667,10 @@ void gidispatch_call(glui32 funcnum, glui32 numargs, gluniversal_t *arglist)
         case 0x0067: /* fileref_does_file_exist */
             arglist[1].uint = glk_fileref_does_file_exist(arglist[0].opaqueref);
             break;
+        case 0x0068: /* fileref_create_from_fileref */
+            arglist[4].opaqueref = glk_fileref_create_from_fileref(arglist[0].uint, 
+                arglist[1].opaqueref, arglist[2].uint);
+            break;
         case 0x0080: /* put_char */
             glk_put_char(arglist[0].uch);
             break;
@@ -731,6 +810,92 @@ void gidispatch_call(glui32 funcnum, glui32 numargs, gluniversal_t *arglist)
         case 0x00D6: /* request_timer_events */
             glk_request_timer_events(arglist[0].uint);
             break;
+#ifdef GLK_MODULE_IMAGE
+        case 0x00E0: /* image_get_info */
+            {
+                int ix = 1;
+                glui32 *ptr1, *ptr2;
+                if (!arglist[ix].ptrflag) {
+                    ptr1 = NULL;
+                }
+                else {
+                    ix++;
+                    ptr1 = &(arglist[ix].uint);
+                }
+                ix++;
+                if (!arglist[ix].ptrflag) {
+                    ptr2 = NULL;
+                }
+                else {
+                    ix++;
+                    ptr2 = &(arglist[ix].uint);
+                }
+                ix++;
+                ix++;
+                arglist[ix].uint = glk_image_get_info(arglist[0].uint, ptr1, ptr2);
+            }
+            break;
+        case 0x00E1: /* image_draw */
+            arglist[5].uint = glk_image_draw(arglist[0].opaqueref, 
+                arglist[1].uint,
+                arglist[2].sint, arglist[3].sint);
+            break;
+        case 0x00E2: /* image_draw_scaled */
+            arglist[7].uint = glk_image_draw_scaled(arglist[0].opaqueref, 
+                arglist[1].uint,
+                arglist[2].sint, arglist[3].sint,
+                arglist[4].uint, arglist[5].uint);
+            break;
+        case 0x00E8: /* window_flow_break */
+            glk_window_flow_break(arglist[0].opaqueref);
+            break;
+        case 0x00E9: /* window_erase_rect */
+            glk_window_erase_rect(arglist[0].opaqueref,
+                arglist[1].sint, arglist[2].sint,
+                arglist[3].uint, arglist[4].uint);
+            break;
+        case 0x00EA: /* window_fill_rect */
+            glk_window_fill_rect(arglist[0].opaqueref, arglist[1].uint,
+                arglist[2].sint, arglist[3].sint,
+                arglist[4].uint, arglist[5].uint);
+            break;
+        case 0x00EB: /* window_set_background_color */
+            glk_window_set_background_color(arglist[0].opaqueref, arglist[1].uint);
+            break;
+#endif /* GLK_MODULE_IMAGE */
+#ifdef GLK_MODULE_SOUND
+        case 0x00F0: /* schannel_iterate */
+            if (arglist[1].ptrflag) 
+                arglist[4].opaqueref = glk_schannel_iterate(arglist[0].opaqueref, &arglist[2].uint);
+            else
+                arglist[3].opaqueref = glk_schannel_iterate(arglist[0].opaqueref, NULL);
+            break;
+        case 0x00F1: /* schannel_get_rock */
+            arglist[2].uint = glk_schannel_get_rock(arglist[0].opaqueref);
+            break;
+        case 0x00F2: /* schannel_create */
+            arglist[2].opaqueref = glk_schannel_create(arglist[0].uint);
+            break;
+        case 0x00F3: /* schannel_destroy */
+            glk_schannel_destroy(arglist[0].opaqueref);
+            break;
+        case 0x00F8: /* schannel_play */
+            arglist[3].uint = glk_schannel_play(arglist[0].opaqueref, arglist[1].uint);
+            break;
+        case 0x00F9: /* schannel_play_ext */
+            arglist[5].uint = glk_schannel_play_ext(arglist[0].opaqueref, 
+                arglist[1].uint, arglist[2].uint, arglist[3].uint);
+            break;
+        case 0x00FA: /* schannel_stop */
+            glk_schannel_stop(arglist[0].opaqueref);
+            break;
+        case 0x00FB: /* schannel_set_volume */
+            glk_schannel_set_volume(arglist[0].opaqueref, arglist[1].uint);
+            break;
+        case 0x00FC: /* sound_load_hint */
+            glk_sound_load_hint(arglist[0].uint, arglist[1].uint);
+            break;
+#endif /* GLK_MODULE_SOUND */
             
         default:
             /* do nothing */
