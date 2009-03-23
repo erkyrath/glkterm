@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.2.
-Glk API which this implements: version 0.52.
+GlkTerm Library: version 0.7.3.
+Glk API which this implements: version 0.5.2.
 Designed by Andrew Plotkin <erkyrath@netcom.com>
 http://www.eblong.com/zarf/glk/index.html
 
@@ -255,8 +255,13 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+0.7.3:
+    Added the ability to open a Blorb file, although the library never
+    makes use of it. (This allows an interpreter to read a game file
+    from Blorb.)
+
 0.7.2:
-    Upgraded to Glk API version 0.52; added sound and graphics stubs.
+    Upgraded to Glk API version 0.5.2; added sound and graphics stubs.
     Made the license a bit friendlier.
 
 0.7.1:
