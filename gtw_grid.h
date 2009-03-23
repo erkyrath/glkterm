@@ -7,8 +7,8 @@
 /* One line of the window. */
 typedef struct tgline_struct {
     int size; /* this is the allocated size; only width is valid */
-    char *chars;
-    unsigned char *attrs;
+    wchar_t *chars;
+    short *attrs; /* changed to short for compatibility with 'style' usage in gtw_bf.* */
     int dirtybeg, dirtyend; /* characters [dirtybeg, dirtyend) need to be redrawn */
 } tgline_t;
 
@@ -34,14 +34,15 @@ typedef struct window_textgrid_struct {
     gidispatch_rock_t inarrayrock;
 } window_textgrid_t;
 
-extern chtype win_textgrid_styleattrs[style_NUMSTYLES];
+/* changed to int per attrset (3ncurses) man page */
+extern int win_textgrid_styleattrs[style_NUMSTYLES];
 
 extern window_textgrid_t *win_textgrid_create(window_t *win);
 extern void win_textgrid_destroy(window_textgrid_t *dwin);
 extern void win_textgrid_rearrange(window_t *win, grect_t *box);
 extern void win_textgrid_redraw(window_t *win);
 extern void win_textgrid_update(window_t *win);
-extern void win_textgrid_putchar(window_t *win, char ch);
+extern void win_textgrid_putchar(window_t *win, wchar_t ch);
 extern void win_textgrid_clear(window_t *win);
 extern void win_textgrid_move_cursor(window_t *win, int xpos, int ypos);
 extern void win_textgrid_place_cursor(window_t *win, int *xpos, int *ypos);

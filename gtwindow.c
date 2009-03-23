@@ -7,12 +7,13 @@
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <wctype.h>
+#include <curses.h>
 
 #ifdef OPT_USE_SIGNALS
 #include <signal.h>
 #endif /* OPT_USE_SIGNALS */
 
-#include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
 #include "gtw_pair.h"
@@ -20,12 +21,13 @@
 #include "gtw_grid.h"
 #include "gtw_buf.h"
 
+
 /* Linked list of all windows */
 static window_t *gli_windowlist = NULL; 
 
 /* For use by gli_print_spaces() */
 #define NUMSPACES (16)
-static char spacebuffer[NUMSPACES+1];
+static wchar_t spacebuffer[NUMSPACES+1];
 
 window_t *gli_rootwin = NULL; /* The topmost window. */
 window_t *gli_focuswin = NULL; /* The window selected by the player. 
@@ -69,7 +71,7 @@ void gli_initialize_windows()
     
     /* Create the curses.h attribute values for each style. */
     for (ix=0; ix<style_NUMSTYLES; ix++) {
-        chtype val = 0;
+        int val = 0;
         if (ix == style_Emphasized || ix == style_Note)
             val |= A_UNDERLINE;
         if (ix == style_Alert)
@@ -268,7 +270,7 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
     
     if (!gli_rootwin) {
         if (splitwin) {
-            gli_strict_warning("window_open: ref must be NULL");
+            gli_strict_warning(L"window_open: ref must be NULL");
             return 0;
         }
         /* ignore method and size now */
@@ -279,20 +281,20 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
     else {
     
         if (!splitwin) {
-            gli_strict_warning("window_open: ref must not be NULL");
+            gli_strict_warning(L"window_open: ref must not be NULL");
             return 0;
         }
         
         val = (method & winmethod_DivisionMask);
         if (val != winmethod_Fixed && val != winmethod_Proportional) {
-            gli_strict_warning("window_open: invalid method (not fixed or proportional)");
+            gli_strict_warning(L"window_open: invalid method (not fixed or proportional)");
             return 0;
         }
         
         val = (method & winmethod_DirMask);
         if (val != winmethod_Above && val != winmethod_Below 
             && val != winmethod_Left && val != winmethod_Right) {
-            gli_strict_warning("window_open: invalid method (bad direction)");
+            gli_strict_warning(L"window_open: invalid method (bad direction)");
             return 0;
         }
 
@@ -300,7 +302,7 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
         
         oldparent = splitwin->parent;
         if (oldparent && oldparent->type != wintype_Pair) {
-            gli_strict_warning("window_open: parent window is not Pair");
+            gli_strict_warning(L"window_open: parent window is not Pair");
             return 0;
         }
     
@@ -308,7 +310,7 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
     
     newwin = gli_new_window(wintype, rock);
     if (!newwin) {
-        gli_strict_warning("window_open: unable to create window");
+        gli_strict_warning(L"window_open: unable to create window");
         return 0;
     }
     
@@ -323,7 +325,7 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
             newwin->data = win_textbuffer_create(newwin);
             break;
         case wintype_Pair:
-            gli_strict_warning("window_open: cannot open pair window directly");
+            gli_strict_warning(L"window_open: cannot open pair window directly");
             gli_delete_window(newwin);
             return 0;
         default:
@@ -334,7 +336,7 @@ winid_t glk_window_open(winid_t splitwin, glui32 method, glui32 size,
     }
     
     if (!newwin->data) {
-        gli_strict_warning("window_open: unable to create window");
+        gli_strict_warning(L"window_open: unable to create window");
         return 0;
     }
     
@@ -429,7 +431,7 @@ static void gli_window_close(window_t *win, int recurse)
 void glk_window_close(window_t *win, stream_result_t *result)
 {
     if (!win) {
-        gli_strict_warning("window_close: invalid ref");
+        gli_strict_warning(L"window_close: invalid ref");
         return;
     }
         
@@ -449,7 +451,7 @@ void glk_window_close(window_t *win, stream_result_t *result)
         /* have to jigger parent */
         grect_t box;
         window_t *pairwin, *sibwin, *grandparwin, *wx;
-        window_pair_t *dpairwin, *dgrandparwin, *dwx;
+        window_pair_t *dpairwin, *dgrandparwin;
         int keydamage_flag;
         
         pairwin = win->parent;
@@ -461,7 +463,7 @@ void glk_window_close(window_t *win, stream_result_t *result)
             sibwin = dpairwin->child1;
         }
         else {
-            gli_strict_warning("window_close: window tree is corrupted");
+            gli_strict_warning(L"window_close: window tree is corrupted");
             return;
         }
         
@@ -531,12 +533,12 @@ void glk_window_get_arrangement(window_t *win, glui32 *method, glui32 *size,
     glui32 val;
     
     if (!win) {
-        gli_strict_warning("window_get_arrangement: invalid ref");
+        gli_strict_warning(L"window_get_arrangement: invalid ref");
         return;
     }
     
     if (win->type != wintype_Pair) {
-        gli_strict_warning("window_get_arrangement: not a Pair window");
+        gli_strict_warning(L"window_get_arrangement: not a Pair window");
         return;
     }
     
@@ -565,19 +567,19 @@ void glk_window_set_arrangement(window_t *win, glui32 method, glui32 size,
     int newvertical, newbackward;
     
     if (!win) {
-        gli_strict_warning("window_set_arrangement: invalid ref");
+        gli_strict_warning(L"window_set_arrangement: invalid ref");
         return;
     }
     
     if (win->type != wintype_Pair) {
-        gli_strict_warning("window_set_arrangement: not a Pair window");
+        gli_strict_warning(L"window_set_arrangement: not a Pair window");
         return;
     }
     
     if (key) {
         window_t *wx;
         if (key->type == wintype_Pair) {
-            gli_strict_warning("window_set_arrangement: keywin cannot be a Pair");
+            gli_strict_warning(L"window_set_arrangement: keywin cannot be a Pair");
             return;
         }
         for (wx=key; wx; wx=wx->parent) {
@@ -585,7 +587,7 @@ void glk_window_set_arrangement(window_t *win, glui32 method, glui32 size,
                 break;
         }
         if (wx == NULL) {
-            gli_strict_warning("window_set_arrangement: keywin must be a descendant");
+            gli_strict_warning(L"window_set_arrangement: keywin must be a descendant");
             return;
         }
     }
@@ -601,15 +603,15 @@ void glk_window_set_arrangement(window_t *win, glui32 method, glui32 size,
 
     if ((newvertical && !dwin->vertical) || (!newvertical && dwin->vertical)) {
         if (!dwin->vertical)
-            gli_strict_warning("window_set_arrangement: split must stay horizontal");
+            gli_strict_warning(L"window_set_arrangement: split must stay horizontal");
         else
-            gli_strict_warning("window_set_arrangement: split must stay vertical");
+            gli_strict_warning(L"window_set_arrangement: split must stay vertical");
         return;
     }
     
     if (key && key->type == wintype_Blank 
         && (method & winmethod_DivisionMask) == winmethod_Fixed) {
-        gli_strict_warning("window_set_arrangement: a Blank window cannot have a fixed size");
+        gli_strict_warning(L"window_set_arrangement: a Blank window cannot have a fixed size");
         return;
     }
 
@@ -690,7 +692,7 @@ window_t *gli_window_iterate_treeorder(window_t *win)
 glui32 glk_window_get_rock(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_get_rock: invalid ref.");
+        gli_strict_warning(L"window_get_rock: invalid ref.");
         return 0;
     }
     
@@ -707,7 +709,7 @@ winid_t glk_window_get_root()
 winid_t glk_window_get_parent(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_get_parent: invalid ref");
+        gli_strict_warning(L"window_get_parent: invalid ref");
         return 0;
     }
     if (win->parent)
@@ -721,7 +723,7 @@ winid_t glk_window_get_sibling(window_t *win)
     window_pair_t *dparwin;
     
     if (!win) {
-        gli_strict_warning("window_get_sibling: invalid ref");
+        gli_strict_warning(L"window_get_sibling: invalid ref");
         return 0;
     }
     if (!win->parent)
@@ -738,7 +740,7 @@ winid_t glk_window_get_sibling(window_t *win)
 glui32 glk_window_get_type(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_get_parent: invalid ref");
+        gli_strict_warning(L"window_get_parent: invalid ref");
         return 0;
     }
     return win->type;
@@ -750,7 +752,7 @@ void glk_window_get_size(window_t *win, glui32 *width, glui32 *height)
     glui32 hgt = 0;
     
     if (!win) {
-        gli_strict_warning("window_get_size: invalid ref");
+        gli_strict_warning(L"window_get_size: invalid ref");
         return;
     }
     
@@ -775,7 +777,7 @@ void glk_window_get_size(window_t *win, glui32 *width, glui32 *height)
 strid_t glk_window_get_stream(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_get_stream: invalid ref");
+        gli_strict_warning(L"window_get_stream: invalid ref");
         return NULL;
     }
     
@@ -785,7 +787,7 @@ strid_t glk_window_get_stream(window_t *win)
 strid_t glk_window_get_echo_stream(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_get_echo_stream: invalid ref");
+        gli_strict_warning(L"window_get_echo_stream: invalid ref");
         return 0;
     }
     
@@ -798,7 +800,7 @@ strid_t glk_window_get_echo_stream(window_t *win)
 void glk_window_set_echo_stream(window_t *win, stream_t *str)
 {
     if (!win) {
-        gli_strict_warning("window_set_echo_stream: invalid window id");
+        gli_strict_warning(L"window_set_echo_stream: invalid window id");
         return;
     }
     
@@ -900,7 +902,7 @@ void gli_windows_redraw()
             ix = 0;
         jx = (content_box.top+content_box.bottom) / 2;
         move(jx, ix);
-        addstr("Please wait...");
+        local_addwstr(L"Please wait...");
     }
 }
 
@@ -968,12 +970,12 @@ void gli_windows_trim_buffers()
 void glk_request_char_event(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("request_char_event: invalid ref");
+        gli_strict_warning(L"request_char_event: invalid ref");
         return;
     }
     
     if (win->char_request || win->line_request) {
-        gli_strict_warning("request_char_event: window already has keyboard request");
+        gli_strict_warning(L"request_char_event: window already has keyboard request");
         return;
     }
     
@@ -984,7 +986,7 @@ void glk_request_char_event(window_t *win)
             win->char_request_uni = FALSE;
             break;
         default:
-            gli_strict_warning("request_char_event: window does not support keyboard input");
+            gli_strict_warning(L"request_char_event: window does not support keyboard input");
             break;
     }
     
@@ -994,12 +996,12 @@ void glk_request_line_event(window_t *win, char *buf, glui32 maxlen,
     glui32 initlen)
 {
     if (!win) {
-        gli_strict_warning("request_line_event: invalid ref");
+        gli_strict_warning(L"request_line_event: invalid ref");
         return;
     }
     
     if (win->char_request || win->line_request) {
-        gli_strict_warning("request_line_event: window already has keyboard request");
+        gli_strict_warning(L"request_line_event: window already has keyboard request");
         return;
     }
     
@@ -1015,7 +1017,7 @@ void glk_request_line_event(window_t *win, char *buf, glui32 maxlen,
             win_textgrid_init_line(win, buf, FALSE, maxlen, initlen);
             break;
         default:
-            gli_strict_warning("request_line_event: window does not support keyboard input");
+            gli_strict_warning(L"request_line_event: window does not support keyboard input");
             break;
     }
     
@@ -1026,12 +1028,12 @@ void glk_request_line_event(window_t *win, char *buf, glui32 maxlen,
 void glk_request_char_event_uni(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("request_char_event: invalid ref");
+        gli_strict_warning(L"request_char_event: invalid ref");
         return;
     }
     
     if (win->char_request || win->line_request) {
-        gli_strict_warning("request_char_event: window already has keyboard request");
+        gli_strict_warning(L"request_char_event: window already has keyboard request");
         return;
     }
     
@@ -1042,7 +1044,7 @@ void glk_request_char_event_uni(window_t *win)
             win->char_request_uni = TRUE;
             break;
         default:
-            gli_strict_warning("request_char_event: window does not support keyboard input");
+            gli_strict_warning(L"request_char_event: window does not support keyboard input");
             break;
     }
     
@@ -1052,12 +1054,12 @@ void glk_request_line_event_uni(window_t *win, glui32 *buf, glui32 maxlen,
     glui32 initlen)
 {
     if (!win) {
-        gli_strict_warning("request_line_event: invalid ref");
+        gli_strict_warning(L"request_line_event: invalid ref");
         return;
     }
     
     if (win->char_request || win->line_request) {
-        gli_strict_warning("request_line_event: window already has keyboard request");
+        gli_strict_warning(L"request_line_event: window already has keyboard request");
         return;
     }
     
@@ -1073,7 +1075,7 @@ void glk_request_line_event_uni(window_t *win, glui32 *buf, glui32 maxlen,
             win_textgrid_init_line(win, buf, TRUE, maxlen, initlen);
             break;
         default:
-            gli_strict_warning("request_line_event: window does not support keyboard input");
+            gli_strict_warning(L"request_line_event: window does not support keyboard input");
             break;
     }
     
@@ -1084,7 +1086,7 @@ void glk_request_line_event_uni(window_t *win, glui32 *buf, glui32 maxlen,
 void glk_request_mouse_event(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("request_mouse_event: invalid ref");
+        gli_strict_warning(L"request_mouse_event: invalid ref");
         return;
     }
     
@@ -1096,7 +1098,7 @@ void glk_request_mouse_event(window_t *win)
 void glk_cancel_char_event(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("cancel_char_event: invalid ref");
+        gli_strict_warning(L"cancel_char_event: invalid ref");
         return;
     }
     
@@ -1122,7 +1124,7 @@ void glk_cancel_line_event(window_t *win, event_t *ev)
     gli_event_clearevent(ev);
     
     if (!win) {
-        gli_strict_warning("cancel_line_event: invalid ref");
+        gli_strict_warning(L"cancel_line_event: invalid ref");
         return;
     }
     
@@ -1146,7 +1148,7 @@ void glk_cancel_line_event(window_t *win, event_t *ev)
 void glk_cancel_mouse_event(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("cancel_mouse_event: invalid ref");
+        gli_strict_warning(L"cancel_mouse_event: invalid ref");
         return;
     }
     
@@ -1155,34 +1157,23 @@ void glk_cancel_mouse_event(window_t *win)
     return;
 }
 
-void gli_window_put_char(window_t *win, char ch)
+void gli_window_put_char(window_t *win, glui32 ch)
 {
-    /* Character set conversion is necessary here, since we're printing to
-        native (curses.h) output routines. */
-    
-    if (!char_printable_table[(unsigned char)ch]) {
-        char *altstr = gli_ascii_equivalent(ch);
-        /* altstr is now a sensible ASCII equivalent, or else an octal
-            code like "\177". Call gli_window_put_char() recursively to
-            print it. This is safe, if funky, because altstr contains
-            only characters in the range 0x20..0x7E. */
-        while (*altstr) {
-            gli_window_put_char(win, *altstr);
-            altstr++;
-        }
-        return;
-    }
-    
-#ifndef OPT_NATIVE_LATIN_1  
-    ch = char_to_native_table[(unsigned char)ch];
-#endif /* OPT_NATIVE_LATIN_1 */
+    wchar_t wc = glui32_to_wchar(ch);
+
+    /* In case the program hasn't checked gestalt for this character
+     * we should filter it here for a legal value.
+     */
+
+    if ( gli_bad_latin_key(ch) || (ch >= 0x100 && ! iswprint(wc)) )
+        wc = L'?';
 
     switch (win->type) {
         case wintype_TextBuffer:
-            win_textbuffer_putchar(win, ch);
+            win_textbuffer_putchar(win, wc);
             break;
         case wintype_TextGrid:
-            win_textgrid_putchar(win, ch);
+            win_textgrid_putchar(win, wc);
             break;
     }
 }
@@ -1190,12 +1181,12 @@ void gli_window_put_char(window_t *win, char ch)
 void glk_window_clear(window_t *win)
 {
     if (!win) {
-        gli_strict_warning("window_clear: invalid ref");
+        gli_strict_warning(L"window_clear: invalid ref");
         return;
     }
     
     if (win->line_request) {
-        gli_strict_warning("window_clear: window has pending line request");
+        gli_strict_warning(L"window_clear: window has pending line request");
         return;
     }
 
@@ -1212,7 +1203,7 @@ void glk_window_clear(window_t *win)
 void glk_window_move_cursor(window_t *win, glui32 xpos, glui32 ypos)
 {
     if (!win) {
-        gli_strict_warning("window_move_cursor: invalid ref");
+        gli_strict_warning(L"window_move_cursor: invalid ref");
         return;
     }
     
@@ -1221,7 +1212,7 @@ void glk_window_move_cursor(window_t *win, glui32 xpos, glui32 ypos)
             win_textgrid_move_cursor(win, xpos, ypos);
             break;
         default:
-            gli_strict_warning("window_move_cursor: not a TextGrid window");
+            gli_strict_warning(L"window_move_cursor: not a TextGrid window");
             break;
     }
 }
@@ -1229,12 +1220,12 @@ void glk_window_move_cursor(window_t *win, glui32 xpos, glui32 ypos)
 void gli_print_spaces(int len)
 {
     while (len >= NUMSPACES) {
-        addstr(spacebuffer);
+        local_addwstr(spacebuffer);
         len -= NUMSPACES;
     }
     
     if (len > 0) {
-        addstr(&(spacebuffer[NUMSPACES - len]));
+        local_addwstr(&(spacebuffer[NUMSPACES - len]));
     }
 }
 
@@ -1264,43 +1255,43 @@ void gcmd_win_refresh(window_t *win, glui32 arg)
 
 glui32 glk_image_draw(winid_t win, glui32 image, glsi32 val1, glsi32 val2)
 {
-    gli_strict_warning("image_draw: graphics not supported.");
+    gli_strict_warning(L"image_draw: graphics not supported.");
     return FALSE;
 }
 
 glui32 glk_image_draw_scaled(winid_t win, glui32 image, 
     glsi32 val1, glsi32 val2, glui32 width, glui32 height)
 {
-    gli_strict_warning("image_draw_scaled: graphics not supported.");
+    gli_strict_warning(L"image_draw_scaled: graphics not supported.");
     return FALSE;
 }
 
 glui32 glk_image_get_info(glui32 image, glui32 *width, glui32 *height)
 {
-    gli_strict_warning("image_get_info: graphics not supported.");
+    gli_strict_warning(L"image_get_info: graphics not supported.");
     return FALSE;
 }
 
 void glk_window_flow_break(winid_t win)
 {
-    gli_strict_warning("window_flow_break: graphics not supported.");
+    gli_strict_warning(L"window_flow_break: graphics not supported.");
 }
 
 void glk_window_erase_rect(winid_t win, 
     glsi32 left, glsi32 top, glui32 width, glui32 height)
 {
-    gli_strict_warning("window_erase_rect: graphics not supported.");
+    gli_strict_warning(L"window_erase_rect: graphics not supported.");
 }
 
 void glk_window_fill_rect(winid_t win, glui32 color, 
     glsi32 left, glsi32 top, glui32 width, glui32 height)
 {
-    gli_strict_warning("window_fill_rect: graphics not supported.");
+    gli_strict_warning(L"window_fill_rect: graphics not supported.");
 }
 
 void glk_window_set_background_color(winid_t win, glui32 color)
 {
-    gli_strict_warning("window_set_background_color: graphics not supported.");
+    gli_strict_warning(L"window_set_background_color: graphics not supported.");
 }
 
 #endif /* GLK_MODULE_IMAGE */
@@ -1309,22 +1300,22 @@ void glk_window_set_background_color(winid_t win, glui32 color)
 
 void glk_set_hyperlink(glui32 linkval)
 {
-    gli_strict_warning("set_hyperlink: hyperlinks not supported.");
+    gli_strict_warning(L"set_hyperlink: hyperlinks not supported.");
 }
 
 void glk_set_hyperlink_stream(strid_t str, glui32 linkval)
 {
-    gli_strict_warning("set_hyperlink_stream: hyperlinks not supported.");
+    gli_strict_warning(L"set_hyperlink_stream: hyperlinks not supported.");
 }
 
 void glk_request_hyperlink_event(winid_t win)
 {
-    gli_strict_warning("request_hyperlink_event: hyperlinks not supported.");
+    gli_strict_warning(L"request_hyperlink_event: hyperlinks not supported.");
 }
 
 void glk_cancel_hyperlink_event(winid_t win)
 {
-    gli_strict_warning("cancel_hyperlink_event: hyperlinks not supported.");
+    gli_strict_warning(L"cancel_hyperlink_event: hyperlinks not supported.");
 }
 
 #endif /* GLK_MODULE_HYPERLINKS */

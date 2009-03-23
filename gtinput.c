@@ -5,6 +5,8 @@
 */
 
 #include "gtoption.h"
+#include <wchar.h>
+#include <wctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,13 +35,13 @@ typedef struct command_struct {
     defined in curses.h. */
 
 /* Keys which are always meaningful. */
-static command_t *commands_always(int key)
+static command_t *commands_always(glui32 key)
 {
     static command_t cmdchangefocus = { gcmd_win_change_focus, 0 };
     static command_t cmdrefresh = { gcmd_win_refresh, 0 };
 
     switch (key) {
-        case '\t': 
+        case keycode_Tab: 
             return &cmdchangefocus;
         case '\014': /* ctrl-L */
             return &cmdrefresh;
@@ -49,13 +51,13 @@ static command_t *commands_always(int key)
 }
 
 /* Keys which are always meaningful in a text grid window. */
-static command_t *commands_textgrid(int key)
+static command_t *commands_textgrid(glui32 key)
 {
     return NULL;
 }
 
 /* Keys for char input in a text grid window. */
-static command_t *commands_textgrid_char(int key)
+static command_t *commands_textgrid_char(glui32 key)
 {
     static command_t cmdv = { gcmd_grid_accept_key, -1 };
 
@@ -63,7 +65,7 @@ static command_t *commands_textgrid_char(int key)
 }
 
 /* Keys for line input in a text grid window. */
-static command_t *commands_textgrid_line(int key)
+static command_t *commands_textgrid_line(glui32 key)
 {
     static command_t cmdacceptline = { gcmd_grid_accept_line, 0 };
     static command_t cmdinsert = { gcmd_grid_insert_key, -1 };
@@ -78,27 +80,23 @@ static command_t *commands_textgrid_line(int key)
 
     if (key >= 32 && key < 256 && key != 127) 
         return &cmdinsert;
+
     switch (key) {
-        case KEY_ENTER:
-        case '\012': /* ctrl-J */
-        case '\015': /* ctrl-M */
+        case keycode_Return:
             return &cmdacceptline;
-        case KEY_LEFT:
+        case keycode_Left:
         case '\002': /* ctrl-B */
             return &cmdmoveleft;
-        case KEY_RIGHT:
+        case keycode_Right:
         case '\006': /* ctrl-F */
             return &cmdmoveright;
-        case KEY_HOME:
+        case keycode_Home:
         case '\001': /* ctrl-A */
             return &cmdmoveleftend;
-        case KEY_END:
+        case keycode_End:
         case '\005': /* ctrl-E */
             return &cmdmoverightend;
-        case '\177': /* delete */
-        case '\010': /* backspace */
-        case KEY_BACKSPACE:
-        case KEY_DC:
+        case keycode_Delete:
             return &cmddelete;
         case '\004': /* ctrl-D */
             return &cmddeletenext;
@@ -107,6 +105,11 @@ static command_t *commands_textgrid_line(int key)
         case '\025': /* ctrl-U */
             return &cmdkillinput;
     }
+    
+    /* Non-Latin1 glyphs valid in this locale */
+    if ( key > 256 && iswprint (glui32_to_wchar(key)) )
+        return &cmdinsert;
+    
     return NULL;
 }
 
@@ -114,7 +117,7 @@ static command_t *commands_textgrid_line(int key)
     these override character input, which means you can never type ctrl-Y
     or ctrl-V in a textbuffer, even though you can in a textgrid. The Glk
     API doesn't make this distinction. Damn. */
-static command_t *commands_textbuffer(int key)
+static command_t *commands_textbuffer(glui32 key)
 {
     static command_t cmdscrolltotop = { gcmd_buffer_scroll, gcmd_UpEnd };
     static command_t cmdscrolltobottom = { gcmd_buffer_scroll, gcmd_DownEnd };
@@ -124,14 +127,14 @@ static command_t *commands_textbuffer(int key)
     static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
 
     switch (key) {
-        case KEY_HOME:
+        case keycode_Home:
             return &cmdscrolltotop;
-        case KEY_END:
+        case keycode_End:
             return &cmdscrolltobottom;
-        case KEY_PPAGE:
+        case keycode_PageUp:
         case '\031': /* ctrl-Y */
             return &cmdscrolluppage;
-        case KEY_NPAGE:
+        case keycode_PageDown:
         case '\026': /* ctrl-V */
             return &cmdscrolldownpage;
     }
@@ -139,7 +142,7 @@ static command_t *commands_textbuffer(int key)
 }
 
 /* Keys for "hit any key to page" mode. */
-static command_t *commands_textbuffer_paging(int key)
+static command_t *commands_textbuffer_paging(glui32 key)
 {
     static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
 
@@ -147,7 +150,7 @@ static command_t *commands_textbuffer_paging(int key)
 }
 
 /* Keys for char input in a text buffer window. */
-static command_t *commands_textbuffer_char(int key)
+static command_t *commands_textbuffer_char(glui32 key)
 {
     static command_t cmdv = { gcmd_buffer_accept_key, -1 };
 
@@ -155,7 +158,7 @@ static command_t *commands_textbuffer_char(int key)
 }
 
 /* Keys for line input in a text buffer window. */
-static command_t *commands_textbuffer_line(int key)
+static command_t *commands_textbuffer_line(glui32 key)
 {
     static command_t cmdacceptline = { gcmd_buffer_accept_line, 0 };
     static command_t cmdinsert = { gcmd_buffer_insert_key, -1 };
@@ -170,29 +173,25 @@ static command_t *commands_textbuffer_line(int key)
     static command_t cmdhistoryprev = { gcmd_buffer_history, gcmd_Up };
     static command_t cmdhistorynext = { gcmd_buffer_history, gcmd_Down };
 
-    if (key >= 32 && key < 256 && key != '\177') 
+    if (key >= 32 && key < 256 && key != 127) 
         return &cmdinsert;
+
     switch (key) {
-        case KEY_ENTER:
-        case '\012': /* ctrl-J */
-        case '\015': /* ctrl-M */
+        case keycode_Return:
             return &cmdacceptline;
-        case KEY_LEFT:
+        case keycode_Left:
         case '\002': /* ctrl-B */
             return &cmdmoveleft;
-        case KEY_RIGHT:
+        case keycode_Right:
         case '\006': /* ctrl-F */
             return &cmdmoveright;
-        case KEY_HOME:
+        case keycode_Home:
         case '\001': /* ctrl-A */
             return &cmdmoveleftend;
-        case KEY_END:
+        case keycode_End:
         case '\005': /* ctrl-E */
             return &cmdmoverightend;
-        case '\177': /* delete */
-        case '\010': /* backspace */
-        case KEY_BACKSPACE:
-        case KEY_DC:
+        case keycode_Delete:
             return &cmddelete;
         case '\004': /* ctrl-D */
             return &cmddeletenext;
@@ -200,20 +199,24 @@ static command_t *commands_textbuffer_line(int key)
             return &cmdkillline;
         case '\025': /* ctrl-U */
             return &cmdkillinput;
-        case KEY_UP:
+        case keycode_Up:
         case '\020': /* ctrl-P */
             return &cmdhistoryprev;
-        case KEY_DOWN:
+        case keycode_Down:
         case '\016': /* ctrl-N */
             return &cmdhistorynext;
     }
+    
+    if ( key >= 256 && iswprint(glui32_to_wchar(key)) )
+        return &cmdinsert;
+    
     return NULL;
 }
 
 /* Check to see if key is bound to anything in the given window.
     First check for char or line input bindings, then general
     bindings. */
-static command_t *commands_window(window_t *win, int key)
+static command_t *commands_window(window_t *win, glui32 key)
 {
     command_t *cmd = NULL;
     
@@ -250,129 +253,297 @@ static command_t *commands_window(window_t *win, int key)
 
 /* Return a string describing a given key. This (sometimes) uses a
     static buffer, which is overwritten with each call. */
-static char *key_to_name(int key)
+static wchar_t *key_to_name(glui32 key)
 {
-    static char kbuf[32];
+    static wchar_t kbuf[32];
     
     if (key >= 32 && key < 256) {
         if (key == 127) {
-            return "delete";
+            return L"delete";
         }
         kbuf[0] = key;
-        kbuf[1] = '\0';
+        kbuf[1] = L'\0';
         return kbuf;
     }
 
     switch (key) {
-        case '\t':
-            return "tab";
-        case '\033':
-            return "escape";
-        case KEY_DOWN:
-            return "down-arrow";
-        case KEY_UP:
-            return "up-arrow";
-        case KEY_LEFT:
-            return "left-arrow";
-        case KEY_RIGHT:
-            return "right-arrow";
-        case KEY_HOME:
-            return "home";
+        case L'\t':
+            return L"tab";
+        case L'\033':
+            return L"escape";
+        case keycode_Down:
+            return L"down-arrow";
+        case keycode_Up:
+            return L"up-arrow";
+        case keycode_Left:
+            return L"left-arrow";
+        case keycode_Right:
+            return L"right-arrow";
+        case keycode_Home:
+            return L"home";
+        /* Now that we don't have access to the raw code, glk can't
+           distinguish between Backspace and Delete.
         case KEY_BACKSPACE:
-            return "backspace";
-        case KEY_DC:
-            return "delete-char";
+            return L"backspace";
+        */
+        case keycode_Delete:
+            return L"delete-char";
+        /* Now that we don't have access to the raw code, glk can't
+           detect IC
         case KEY_IC:
-            return "insert-char";
-        case KEY_NPAGE:
-            return "page-down";
-        case KEY_PPAGE:
-            return "page-up";
-        case KEY_ENTER:
-            return "enter";
-        case KEY_END:
-            return "end";
+            return L"insert-char";
+        */
+        case keycode_PageDown:
+            return L"page-down";
+        case keycode_PageUp:
+            return L"page-up";
+        case keycode_Return:
+            return L"enter";
+        case keycode_End:
+            return L"end";
+        /* Now that we don't have access to the raw code, glk can't
+           detect HELP
         case KEY_HELP:
-            return "help";
+            return L"help";
+        */
+        case keycode_Func1:
+            return L"Function-1";
+        case keycode_Func2:
+            return L"Function-2";
+        case keycode_Func3:
+            return L"Function-3";
+        case keycode_Func4:
+            return L"Function-4";
+        case keycode_Func5:
+            return L"Function-5";
+        case keycode_Func6:
+            return L"Function-6";
+        case keycode_Func7:
+            return L"Function-7";
+        case keycode_Func8:
+            return L"Function-8";
+        case keycode_Func9:
+            return L"Function-9";
+        case keycode_Func10:
+            return L"Function-10";
+        case keycode_Func11:
+            return L"Function-11";
+        case keycode_Func12:
+            return L"Function-12";
     }
 
     if (key >= 0 && key < 32) {
-        sprintf(kbuf, "ctrl-%c", '@'+key);
+        /* swprintf(kbuf, 32, L"ctrl-%c", '@'+key); */
+        kbuf[0] = L'\0';
+        wcsncat(kbuf, L"ctrl-", 32);
+        int l = wcslen(kbuf);
+        kbuf[l] = UCS('@'+key);
+        kbuf[l + 1] = L'\0';
         return kbuf;
     }
 
-    return "unknown-key";
+    return L"unknown-key";
 }
 
-glui32 gli_input_from_native(int key)
+/* Forbidden Latin-1 input values */
+int gli_bad_latin_key (glui32 key)
 {
-  glui32 arg = 0;
+    return (key <= 31 && key != 10) || (key >= 127 && key <= 159);
+}
 
-  /* convert from curses.h key codes to Glk, if necessary. */
-  switch (key) {
-  case '\t': 
-    arg = keycode_Tab;
-    break;
-  case '\033':
-    arg = keycode_Escape;
-    break;
-  case KEY_DOWN:
-    arg = keycode_Down;
-    break;
-  case KEY_UP:
-    arg = keycode_Up;
-    break;
-  case KEY_LEFT:
-    arg = keycode_Left;
-    break;
-  case KEY_RIGHT:
-    arg = keycode_Right;
-    break;
-  case KEY_HOME:
-    arg = keycode_Home;
-    break;
-  case '\177': /* delete */
-  case '\010': /* backspace */
-  case KEY_BACKSPACE:
-  case KEY_DC:
-    arg = keycode_Delete;
-    break;
-  case KEY_NPAGE:
-    arg = keycode_PageDown;
-    break;
-  case KEY_PPAGE:
-    arg = keycode_PageUp;
-    break;
-  case KEY_ENTER:
-  case '\012': /* ctrl-J */
-  case '\015': /* ctrl-M */
-    arg = keycode_Return;
-    break;
-  case KEY_END:
-    arg = keycode_End;
-    break;
-  default:
-    if (key < 0 || key >= 256) {
-      arg = keycode_Unknown;
+/* Allowed key codes */
+int gli_legal_keycode(glui32 key)
+{
+    switch(key) {
+        case keycode_Left:
+            return has_key(glui32_to_wchar(KEY_LEFT));
+        case keycode_Right:
+            return has_key(glui32_to_wchar(KEY_RIGHT));
+        case keycode_Up:
+            return has_key(glui32_to_wchar(KEY_UP));
+        case keycode_Down:
+            return has_key(glui32_to_wchar(KEY_DOWN));
+        case keycode_Return:
+            return has_key(glui32_to_wchar(KEY_ENTER));
+        case keycode_Delete:
+            return has_key(glui32_to_wchar(KEY_BACKSPACE) || has_key(glui32_to_wchar(KEY_DC)));
+        case keycode_Escape:
+            return TRUE;
+        case keycode_Tab:
+            return TRUE;
+        case keycode_Unknown:
+            return FALSE;
+        case keycode_PageUp:
+            return has_key(glui32_to_wchar(KEY_PPAGE));
+        case keycode_PageDown:
+            return has_key(glui32_to_wchar(KEY_NPAGE));
+        case keycode_Home:
+            return has_key(glui32_to_wchar(KEY_HOME));
+        case keycode_End:
+            return has_key(glui32_to_wchar(KEY_END));
+        case keycode_Func1:
+            return has_key(glui32_to_wchar(KEY_F(1)));
+        case keycode_Func2:
+            return has_key(glui32_to_wchar(KEY_F(2)));
+        case keycode_Func3:
+            return has_key(glui32_to_wchar(KEY_F(3)));
+        case keycode_Func4:
+            return has_key(glui32_to_wchar(KEY_F(4)));
+        case keycode_Func5:
+            return has_key(glui32_to_wchar(KEY_F(5)));
+        case keycode_Func6:
+            return has_key(glui32_to_wchar(KEY_F(6)));
+        case keycode_Func7:
+            return has_key(glui32_to_wchar(KEY_F(7)));
+        case keycode_Func8:
+            return has_key(glui32_to_wchar(KEY_F(8)));
+        case keycode_Func9:
+            return has_key(glui32_to_wchar(KEY_F(9)));
+        case keycode_Func10:
+            return has_key(glui32_to_wchar(KEY_F(10)));
+        case keycode_Func11:
+            return has_key(glui32_to_wchar(KEY_F(11)));
+        case keycode_Func12:
+            return has_key(glui32_to_wchar(KEY_F(12)));
+        default:
+            return FALSE;
+    }
+
+}
+
+glui32 gli_input_from_native(glui32 key)
+{
+    /* This is where illegal values get filtered out from character input */
+    if ( gli_bad_latin_key(key) || (key >= 0x100 && ! (gli_legal_keycode(key) || iswprint(glui32_to_wchar(key)))) )
+        return keycode_Unknown;
+    else
+        return key;
+}
+
+glui32 gli_translate_key(int status, wint_t key)
+{
+    glui32 arg = 0;
+
+    /* convert from curses.h key codes to Glk, if necessary. */
+    if ( status == KEY_CODE_YES ) {
+        switch (key) {
+            case KEY_DOWN:
+                arg = keycode_Down;
+                break;
+            case KEY_UP:
+                arg = keycode_Up;
+                break;
+            case KEY_LEFT:
+                arg = keycode_Left;
+                break;
+            case KEY_RIGHT:
+                arg = keycode_Right;
+                break;
+            case KEY_HOME:
+                arg = keycode_Home;
+                break;
+            case KEY_BACKSPACE:
+            case KEY_DC:
+                arg = keycode_Delete;
+                break;
+            case KEY_NPAGE:
+                arg = keycode_PageDown;
+                break;
+            case KEY_PPAGE:
+                arg = keycode_PageUp;
+                break;
+            case KEY_ENTER:
+                arg = keycode_Return;
+                break;
+            case KEY_END:
+                arg = keycode_End;
+                break;
+            case KEY_F(1):
+                arg = keycode_Func1;
+                break;
+            case KEY_F(2):
+                arg = keycode_Func2;
+                break;
+            case KEY_F(3):
+                arg = keycode_Func3;
+                break;
+            case KEY_F(4):
+                arg = keycode_Func4;
+                break;
+            case KEY_F(5):
+                arg = keycode_Func5;
+                break;
+            case KEY_F(6):
+                arg = keycode_Func6;
+                break;
+            case KEY_F(7):
+                arg = keycode_Func7;
+                break;
+            case KEY_F(8):
+                arg = keycode_Func8;
+                break;
+            case KEY_F(9):
+                arg = keycode_Func9;
+                break;
+            case KEY_F(10):
+                arg = keycode_Func10;
+                break;
+            case KEY_F(11):
+                arg = keycode_Func11;
+                break;
+            case KEY_F(12):
+                arg = keycode_Func12;
+                break;
+            default:
+                  arg = keycode_Unknown;
+                  break;
+        }
     }
     else {
-#ifdef OPT_NATIVE_LATIN_1
-      arg = key;
-#else /* OPT_NATIVE_LATIN_1 */
-      arg = char_from_native_table[key];
-      if (!arg && key != '\0')
-        arg = keycode_Unknown;
-#endif /* OPT_NATIVE_LATIN_1 */
+        switch (key) {
+            case L'\t': 
+                arg = keycode_Tab;
+                break;
+            case L'\033':
+                arg = keycode_Escape;
+                break;
+            case L'\177': /* delete */
+            case L'\010': /* backspace */
+                arg = keycode_Delete;
+                break;
+            case L'\012': /* ctrl-J */
+            case L'\015': /* ctrl-M */
+                arg = keycode_Return;
+                break;
+            default:
+                if ( key > 0x100 && ! iswprint(key) ) {
+                    arg = keycode_Unknown;
+                }
+                else {
+                    arg = wchar_to_glui32(key);
+                }
+                break;
+        }
     }
-    break;
-  }
 
-  return arg;
+    return arg;
+}
+
+int gli_get_key(glui32 *key)
+{
+    wint_t keycode;
+    int status;
+    
+    status = local_get_wch(&keycode);
+    
+    *key = gli_translate_key(status, keycode);
+    
+    return status;
 }
 
 /* Handle a keystroke. This is called from glk_select() whenever a
     key is hit. */
-void gli_input_handle_key(int key)
+void gli_input_handle_key(glui32 key)
 {
     command_t *cmd = NULL;
     window_t *win = NULL;
@@ -423,9 +594,11 @@ void gli_input_handle_key(int key)
         (*cmd->func)(win, arg);
     }
     else {
-        char buf[256];
-        char *kbuf = key_to_name(key);
-        sprintf(buf, "The key <%s> is not currently defined.", kbuf);
+        wchar_t buf[256];
+        /* swprintf(buf, 256, L"The key <%ls> is not currently defined.", kbuf); */
+        wcsncat(buf, L"The key <", 256);
+        wcsncat(buf, key_to_name(key), 256 - wcslen(buf));
+        wcsncat(buf, L"> is not currently defined.", 256 - wcslen(buf));
         gli_msgline(buf);
     }
 }

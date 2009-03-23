@@ -1,6 +1,6 @@
 /* main.c: Top-level source file
         for GlkTerm, curses.h implementation of the Glk API.
-    Glk API which this implements: version 0.6.1.
+    Glk API which this implements: version 0.7.0.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://eblong.com/zarf/glk/index.html
 */
@@ -9,7 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <curses.h>
+#include <locale.h>
 #include "glk.h"
 #include "glkterm.h"
 #include "glkstart.h"
@@ -42,6 +44,8 @@ int main(int argc, char *argv[])
     int ix, jx, val;
     glkunix_startup_t startdata;
     
+    setlocale (LC_CTYPE, "");
+    
     /* Test for compile-time errors. If one of these spouts off, you
         must edit glk.h and recompile. */
     if (sizeof(glui32) != 4) {
@@ -50,10 +54,6 @@ int main(int argc, char *argv[])
     }
     if ((glui32)(-1) < 0) {
         printf("Compile-time error: glui32 is not unsigned. Please fix glk.h.\n");
-        return 1;
-    }
-    if (sizeof(window_t *) > 4) {
-        printf("Compile-time error: Pointers cannot fit in a glui32. Start writing hashtable code.\n");
         return 1;
     }
     

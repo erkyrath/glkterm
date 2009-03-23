@@ -5,6 +5,7 @@
 */
 
 #include "gtoption.h"
+#include <wchar.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,22 +16,25 @@
 /* Nothing fancy here. We store a string, and print it on the bottom line.
     If pref_messageline is FALSE, none of these functions do anything. */
 
-static char *msgbuf = NULL;
+static wchar_t *msgbuf = NULL;
 static int msgbuflen = 0;
 static int msgbuf_size = 0;
 
-void gli_msgline_warning(char *msg)
+void gli_msgline_warning(wchar_t *msg)
 {
-    char buf[256];
+    wchar_t buf[256];
     
     if (!pref_messageline)
         return;
-        
-    sprintf(buf, "Glk library error: %s", msg);
+    
+    buf[0] = L'\0';
+    wcsncat(buf, L"Glk library error: ", 256);
+    int l = wcslen(buf);
+    wcsncat(buf + l, msg, 256 - l);
     gli_msgline(buf);
 }
 
-void gli_msgline(char *msg)
+void gli_msgline(wchar_t *msg)
 {
     int len;
     
@@ -38,23 +42,23 @@ void gli_msgline(char *msg)
         return;
         
     if (!msg) 
-        msg = "";
+        msg = L"";
     
-    len = strlen(msg);
+    len = wcslen(msg);
     if (!msgbuf) {
         msgbuf_size = len+80;
-        msgbuf = (char *)malloc(msgbuf_size * sizeof(char));
+        msgbuf = (wchar_t *)malloc(msgbuf_size * sizeof(wchar_t));
     }
     else if (len+1 > msgbuf_size) {
         while (len+1 > msgbuf_size)
             msgbuf_size *= 2;
-        msgbuf = (char *)realloc(msgbuf, msgbuf_size * sizeof(char));
+        msgbuf = (wchar_t *)realloc(msgbuf, msgbuf_size * sizeof(wchar_t));
     }
 
     if (!msgbuf)
         return;
     
-    strcpy(msgbuf, msg);
+    wcscpy(msgbuf, msg);
     msgbuflen = len;
     
     gli_msgline_redraw();
@@ -70,19 +74,16 @@ void gli_msgline_redraw()
         clrtoeol();
     }
     else {
-        int ix, len;
+        int len;
         
         move(content_box.bottom, 0);
-        addch(' ');
-        addch(' ');
+        local_addwstr(L"  ");
         attron(A_REVERSE);
         if (msgbuflen > content_box.right-3)
             len = content_box.right-3;
         else
             len = msgbuflen;
-        for (ix=0; ix<len; ix++) {
-            addch(msgbuf[ix]);
-        }
+        local_addnwstr(msgbuf, len);
         attrset(0);
         clrtoeol();
     }

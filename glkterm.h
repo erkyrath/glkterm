@@ -174,20 +174,23 @@ extern int pref_prompt_defaults;
 extern void gli_initialize_misc(void);
 extern char *gli_ascii_equivalent(unsigned char ch);
 
-extern void gli_msgline_warning(char *msg);
-extern void gli_msgline(char *msg);
+extern void gli_msgline_warning(wchar_t *msg);
+extern void gli_msgline(wchar_t *msg);
 extern void gli_msgline_redraw(void);
 
-extern int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length);
-extern int gli_msgin_getchar(char *prompt, int hilite);
+extern int gli_msgin_getline(wchar_t *prompt, wchar_t *buf, int maxlen, int *length);
+extern glui32 gli_msgin_getchar(wchar_t *prompt, int hilite);
 
 extern void gli_initialize_events(void);
 extern void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2);
 extern void gli_set_halfdelay(void);
 
-extern void gli_input_handle_key(int key);
+extern void gli_input_handle_key(glui32 key);
 extern void gli_input_guess_focus(void);
-extern glui32 gli_input_from_native(int key);
+extern glui32 gli_input_from_native(glui32 key);
+extern int gli_get_key(glui32 *key);
+extern int gli_legal_keycode(glui32 key);
+extern int gli_bad_latin_key(glui32 key);
 
 extern void gli_initialize_windows(void);
 extern void gli_setup_curses(void);
@@ -203,7 +206,7 @@ extern void gli_windows_size_change(void);
 extern void gli_windows_place_cursor(void);
 extern void gli_windows_set_paging(int forcetoend);
 extern void gli_windows_trim_buffers(void);
-extern void gli_window_put_char(window_t *win, char ch);
+extern void gli_window_put_char(window_t *win, glui32 ch);
 extern void gli_windows_unechostream(stream_t *str);
 extern void gli_print_spaces(int len);
 
@@ -227,6 +230,21 @@ extern fileref_t *gli_new_fileref(char *filename, glui32 usage,
     glui32 rock);
 extern void gli_delete_fileref(fileref_t *fref);
 
+extern int local_get_wch(wint_t *ch);
+extern int local_addwstr(const wchar_t *wstr);
+extern int local_mvaddnwstr(int y, int x, const wchar_t *wstr, int n);
+extern int local_addnwstr(const wchar_t *wstr, int n);
+
+/* N.B. The following conversion macros are architecture dependent
+ * In particular, glui32_to_wchar() will have to be re-written for 
+ * each new architecture and C library.
+ * This example is for Linux gcc4+ with GNU libc6
+ */
+#define UCS(l) ((glui32) (0x000000FF & (l)))
+#define Lat(u) ((u) & 0xFFFFFF00 ? '?' : (char) ((u) & 0xFF))
+#define glui32_to_wchar(x) (x)
+#define wchar_to_glui32(x) (x)
+
 /* A macro that I can't think of anywhere else to put it. */
 
 #define gli_event_clearevent(evp)  \
@@ -234,7 +252,7 @@ extern void gli_delete_fileref(fileref_t *fref);
     (evp)->win = NULL,    \
     (evp)->val1 = 0,   \
     (evp)->val2 = 0)
-
+    
 #ifdef NO_MEMMOVE
     extern void *memmove(void *dest, void *src, int n);
 #endif /* NO_MEMMOVE */

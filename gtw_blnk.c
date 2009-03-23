@@ -7,6 +7,7 @@
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <wchar.h>
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
@@ -39,17 +40,20 @@ void win_blank_rearrange(window_t *win, grect_t *box)
 void win_blank_redraw(window_t *win)
 {
     int jx, ix;
-    window_blank_t *dwin = win->data;
 
     for (jx=win->bbox.top; jx<win->bbox.bottom; jx++) {
         move(jx, win->bbox.left);
         for (ix=win->bbox.left; ix<win->bbox.right; ix++)
-            addch(':');
+            /* Yes, this is ugly, but there is no wchar_t equivalent of addch.
+               and without using wchar_t support, there is no guarantee that ':'
+               (or whatever it is replaced with in a translation) will be converted
+               to the user's native character set. */
+            local_addnwstr(L":", 1);
     }
     
-    mvaddch(win->bbox.top, win->bbox.left, '/');
-    mvaddch(win->bbox.top, win->bbox.right-1, '\\');
-    mvaddch(win->bbox.bottom-1, win->bbox.left, '\\');
-    mvaddch(win->bbox.bottom-1, win->bbox.right-1, '/');
+    local_mvaddnwstr(win->bbox.top, win->bbox.left, L"/", 1);
+    local_mvaddnwstr(win->bbox.top, win->bbox.right-1, L"\\", 1);
+    local_mvaddnwstr(win->bbox.bottom-1, win->bbox.left, L"\\", 1);
+    local_mvaddnwstr(win->bbox.bottom-1, win->bbox.right-1, L"/", 1);
 }
 

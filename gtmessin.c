@@ -4,10 +4,13 @@
     http://www.eblong.com/zarf/glk/index.html
 */
 
+#define _XOPEN_SOURCE /* wcwidth */
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
@@ -22,8 +25,8 @@
 */
 
 typedef struct inline_struct {
-    char *prompt;
-    char *buf;
+    wchar_t *prompt;
+    wchar_t *buf;
     int maxlen;
     int len;
     
@@ -36,21 +39,22 @@ typedef struct inline_struct {
 
 #define LEFT_MARGIN (1)
 
-static void handle_key(inline_t *lin, int key);
+static void handle_key(inline_t *lin, glui32 key);
 static void update_text(inline_t *lin);
 
-int gli_msgin_getchar(char *prompt, int hilite)
+glui32 gli_msgin_getchar(wchar_t *prompt, int hilite)
 {
     int orgx, orgy;
-    int key;
+    glui32 key;
+    int status;
 
     gli_windows_update();
     gli_windows_set_paging(TRUE);
     
     if (!prompt)
-        prompt = "";
+        prompt = L"";
 
-    orgx = LEFT_MARGIN + strlen(prompt);
+    orgx = LEFT_MARGIN + wcswidth(prompt, wcslen(prompt));
 
     /* If the bottom line is reserved for messages, great; clear the message
         line and do input there. If not, we'll have to wipe the bottom line
@@ -68,16 +72,16 @@ int gli_msgin_getchar(char *prompt, int hilite)
     move(orgy, LEFT_MARGIN);
     if (hilite)
         attron(A_REVERSE);
-    addstr(prompt);
+    local_addwstr(prompt);
     if (hilite)
         attrset(0);
 
     move(orgy, orgx);
     refresh();
 
-    key = ERR;
-    while (key == ERR) {
-        key = getch();
+    status = ERR;
+    while (status == ERR) {
+        status = gli_get_key(&key);
     }
     
     if (pref_messageline) {
@@ -94,7 +98,7 @@ int gli_msgin_getchar(char *prompt, int hilite)
     return key;
 }
 
-int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
+int gli_msgin_getline(wchar_t *prompt, wchar_t *buf, int maxlen, int *length)
 {
     inline_t indata; /* just allocate it on the stack */
     inline_t *lin = &indata;
@@ -104,7 +108,7 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
     gli_windows_set_paging(TRUE);
 
     if (!prompt)
-        prompt = "";
+        prompt = L"";
     
     lin->done = FALSE;
     lin->accept = FALSE;
@@ -115,7 +119,7 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
     lin->len = *length;
     lin->curs = lin->len;
     
-    lin->orgx = LEFT_MARGIN + strlen(prompt);
+    lin->orgx = LEFT_MARGIN + wcswidth(prompt, wcslen(prompt));
     
     /* See note in gli_msgin_getchar(). */
     if (pref_messageline) {
@@ -129,23 +133,26 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
     }
     
     move(lin->orgy, LEFT_MARGIN);
-    addstr(lin->prompt);
+    local_addwstr(lin->prompt);
     update_text(lin);
     
     needrefresh = TRUE;
     
     while (!lin->done) {
-        int key;
+        wint_t key;
+        glui32 key32;
+        int status;
         
-        move(lin->orgy, lin->orgx + lin->curs);
+        move(lin->orgy, lin->orgx + wcswidth(lin->buf, lin->curs));
         if (needrefresh) {
             refresh();
             needrefresh = FALSE;
         }
 
-        key = getch();
+        status = gli_get_key(&key32);
+        key = key32;
         
-        if (key != ERR) {
+        if (status != ERR) {
             handle_key(lin, key);
             needrefresh = TRUE;
             continue;
@@ -169,70 +176,61 @@ int gli_msgin_getline(char *prompt, char *buf, int maxlen, int *length)
 
 static void update_text(inline_t *lin)
 {
-    int ix;
-    
     move(lin->orgy, lin->orgx);
-    for (ix=0; ix<lin->len; ix++) {
-        addch(lin->buf[ix]);
-    }
+    local_addnwstr(lin->buf, lin->len);
     clrtoeol();
 }
 
-static void handle_key(inline_t *lin, int key)
+static void handle_key(inline_t *lin, glui32 key)
 {
-    char *buf = lin->buf; /* cache */
+    wchar_t *buf = lin->buf; /* cache */
     
     switch (key) {
     
-        case KEY_ENTER:
-        case '\012': /* ctrl-J */
-        case '\015': /* ctrl-M */
+        case keycode_Return:
             lin->accept = TRUE;
             lin->done = TRUE;
             break;
             
         case '\007': /* ctrl-G */
-        case '\033': /* escape */
+        case keycode_Escape: /* escape */
             lin->accept = FALSE;
             lin->done = TRUE;
             break;
             
-        case KEY_LEFT:
+        case keycode_Left:
         case '\002': /* ctrl-B */
             if (lin->curs > 0) {
                 lin->curs--;
             }
             break;
             
-        case KEY_RIGHT:
+        case keycode_Right:
         case '\006': /* ctrl-F */
             if (lin->curs < lin->len) {
                 lin->curs++;
             }
             break;
 
-        case KEY_HOME:
+        case keycode_Home:
         case '\001': /* ctrl-A */
             if (lin->curs > 0) {
                 lin->curs = 0;
             }
             break;
             
-        case KEY_END:
+        case keycode_End:
         case '\005': /* ctrl-E */
             if (lin->curs < lin->len) {
                 lin->curs = lin->len;
             }
             break;
 
-        case '\177': /* delete */
-        case '\010': /* backspace */
-        case KEY_BACKSPACE:
-        case KEY_DC:
+        case keycode_Delete:
             if (lin->curs > 0) {
                 if (lin->curs < lin->len) {
                     memmove(buf+(lin->curs-1), buf+(lin->curs),
-                        (lin->len - lin->curs) * sizeof(char));
+                        (lin->len - lin->curs) * sizeof(wchar_t));
                 }
                 lin->len--;
                 lin->curs--;
@@ -244,7 +242,7 @@ static void handle_key(inline_t *lin, int key)
             if (lin->curs < lin->len) {
                 if ((lin->curs+1) < lin->len) {
                     memmove(buf+(lin->curs), buf+(lin->curs+1),
-                        (lin->len - (lin->curs+1)) * sizeof(char));
+                        (lin->len - (lin->curs+1)) * sizeof(wchar_t));
                 }
                 lin->len--;
                 update_text(lin);
@@ -267,11 +265,11 @@ static void handle_key(inline_t *lin, int key)
             break;
         
         default: /* everything else */
-            if (key >= 32 && key < 256) {
+            if ( (! gli_bad_latin_key(key)) && iswprint(glui32_to_wchar(key))) {
                 if (lin->len < lin->maxlen) {
                     if (lin->curs < lin->len) {
                         memmove(buf+(lin->curs+1), buf+(lin->curs), 
-                            (lin->len - lin->curs) * sizeof(char));
+                            (lin->len - lin->curs) * sizeof(wchar_t));
                     }
                     lin->len++;
                     buf[lin->curs] = key;

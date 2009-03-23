@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #ifdef OPT_TIMED_INPUT
 #include <sys/time.h>
@@ -56,7 +57,9 @@ void glk_select(event_t *event)
     gli_input_guess_focus();
     
     while (curevent->type == evtype_None) {
-        int key;
+        wint_t key;
+        glui32 key32;
+        int status;
     
         /* It would be nice to display a "hit any key to continue" message in
             all windows which require it. */
@@ -65,7 +68,8 @@ void glk_select(event_t *event)
             refresh();
             needrefresh = FALSE;
         }
-        key = getch();
+        status = gli_get_key(&key32);
+        key = key32;
         
 #ifdef OPT_USE_SIGNALS
         if (just_killed) {
@@ -75,7 +79,7 @@ void glk_select(event_t *event)
         }
 #endif /* OPT_USE_SIGNALS */
         
-        if (key != ERR) {
+        if (status != ERR) {
             /* An actual key has been hit */
             gli_input_handle_key(key);
             needrefresh = TRUE;
