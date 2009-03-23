@@ -80,7 +80,8 @@ typedef struct window_textbuffer_struct {
     long lastseenline;
     
     /* for line input */
-    char *inbuf;
+    void *inbuf; /* char* or glui32*, depending on inunicode. */
+    int inunicode;
     int inmax;
     long infence;
     long incurs;
@@ -100,7 +101,7 @@ extern void win_textbuffer_clear(window_t *win);
 extern void win_textbuffer_trim_buffer(window_t *win);
 extern void win_textbuffer_place_cursor(window_t *win, int *xpos, int *ypos);
 extern void win_textbuffer_set_paging(window_t *win, int forcetoend);
-extern void win_textbuffer_init_line(window_t *win, char *buf, int maxlen, int initlen);
+extern void win_textbuffer_init_line(window_t *win, void *buf, int unicode, int maxlen, int initlen);
 extern void win_textbuffer_cancel_line(window_t *win, event_t *ev);
 
 extern void gcmd_buffer_accept_key(window_t *win, glui32 arg);

@@ -2,7 +2,7 @@
         for GlkTerm, curses.h implementation of the Glk API.
     Glk API which this implements: version 0.6.1.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
-    http://www.eblong.com/zarf/glk/index.html
+    http://eblong.com/zarf/glk/index.html
 */
 
 #include "gtoption.h"
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     if (pref_printversion) {
         printf("GlkTerm, library version %s (%s).\n", 
             LIBRARY_VERSION, LIBRARY_PORT);
-        printf("For more information, see http://www.eblong.com/zarf/glk/index.html\n");
+        printf("For more information, see http://eblong.com/zarf/glk/index.html\n");
         return 1;
     }
     

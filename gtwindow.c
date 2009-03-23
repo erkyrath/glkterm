@@ -208,6 +208,8 @@ window_t *gli_new_window(glui32 type, glui32 rock)
     win->data = NULL; /* for now */
     win->char_request = FALSE;
     win->line_request = FALSE;
+    win->line_request_uni = FALSE;
+    win->char_request_uni = FALSE;
     win->style = style_Normal;
 
     win->str = gli_stream_open_window(win);
@@ -979,6 +981,7 @@ void glk_request_char_event(window_t *win)
         case wintype_TextBuffer:
         case wintype_TextGrid:
             win->char_request = TRUE;
+            win->char_request_uni = FALSE;
             break;
         default:
             gli_strict_warning("request_char_event: window does not support keyboard input");
@@ -1003,11 +1006,13 @@ void glk_request_line_event(window_t *win, char *buf, glui32 maxlen,
     switch (win->type) {
         case wintype_TextBuffer:
             win->line_request = TRUE;
-            win_textbuffer_init_line(win, buf, maxlen, initlen);
+            win->line_request_uni = FALSE;
+            win_textbuffer_init_line(win, buf, FALSE, maxlen, initlen);
             break;
         case wintype_TextGrid:
             win->line_request = TRUE;
-            win_textgrid_init_line(win, buf, maxlen, initlen);
+            win->line_request_uni = FALSE;
+            win_textgrid_init_line(win, buf, FALSE, maxlen, initlen);
             break;
         default:
             gli_strict_warning("request_line_event: window does not support keyboard input");
@@ -1015,6 +1020,66 @@ void glk_request_line_event(window_t *win, char *buf, glui32 maxlen,
     }
     
 }
+
+#ifdef GLK_MODULE_UNICODE
+
+void glk_request_char_event_uni(window_t *win)
+{
+    if (!win) {
+        gli_strict_warning("request_char_event: invalid ref");
+        return;
+    }
+    
+    if (win->char_request || win->line_request) {
+        gli_strict_warning("request_char_event: window already has keyboard request");
+        return;
+    }
+    
+    switch (win->type) {
+        case wintype_TextBuffer:
+        case wintype_TextGrid:
+            win->char_request = TRUE;
+            win->char_request_uni = TRUE;
+            break;
+        default:
+            gli_strict_warning("request_char_event: window does not support keyboard input");
+            break;
+    }
+    
+}
+
+void glk_request_line_event_uni(window_t *win, glui32 *buf, glui32 maxlen, 
+    glui32 initlen)
+{
+    if (!win) {
+        gli_strict_warning("request_line_event: invalid ref");
+        return;
+    }
+    
+    if (win->char_request || win->line_request) {
+        gli_strict_warning("request_line_event: window already has keyboard request");
+        return;
+    }
+    
+    switch (win->type) {
+        case wintype_TextBuffer:
+            win->line_request = TRUE;
+            win->line_request_uni = TRUE;
+            win_textbuffer_init_line(win, buf, TRUE, maxlen, initlen);
+            break;
+        case wintype_TextGrid:
+            win->line_request = TRUE;
+            win->line_request_uni = TRUE;
+            win_textgrid_init_line(win, buf, TRUE, maxlen, initlen);
+            break;
+        default:
+            gli_strict_warning("request_line_event: window does not support keyboard input");
+            break;
+    }
+    
+}
+
+#endif /* GLK_MODULE_UNICODE */
 
 void glk_request_mouse_event(window_t *win)
 {

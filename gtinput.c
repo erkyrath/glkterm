@@ -361,7 +361,7 @@ glui32 gli_input_from_native(int key)
 #else /* OPT_NATIVE_LATIN_1 */
       arg = char_from_native_table[key];
       if (!arg && key != '\0')
-	arg = keycode_Unknown;
+        arg = keycode_Unknown;
 #endif /* OPT_NATIVE_LATIN_1 */
     }
     break;

@@ -1,9 +1,9 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 0.7.8.
-Glk API which this implements: version 0.6.1.
+GlkTerm Library: version 0.8.0.
+Glk API which this implements: version 0.7.0.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
-http://www.eblong.com/zarf/glk/index.html
+http://eblong.com/zarf/glk/index.html
 
 This is source code for an implementation of the Glk library which runs
 in a terminal window, using the curses.h library for screen control.
@@ -263,6 +263,10 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+0.8.0:
+    Upgraded to Glk API version 0.7.0; added the Unicode functions.
+    (But the interface cannot yet print or read Unicode characters.)
 
 0.7.8:
     Upgraded to Glk API version 0.6.1; i.e., a couple of new gestalt

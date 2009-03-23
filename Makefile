@@ -27,13 +27,15 @@ GLKTERM_OBJS = \
   main.o gtevent.o gtfref.o gtgestal.o gtinput.o \
   gtmessag.o gtmessin.o gtmisc.o gtstream.o gtstyle.o \
   gtw_blnk.o gtw_buf.o gtw_grid.o gtw_pair.o gtwindow.o \
-  gtschan.o gtblorb.o gi_dispa.o gi_blorb.o
+  gtschan.o gtblorb.o cgunicod.o gi_dispa.o gi_blorb.o
 
 GLKTERM_HEADERS = \
   glkterm.h gtoption.h gtw_blnk.h gtw_buf.h \
   gtw_grid.h gtw_pair.h gi_dispa.h
 
 all: $(GLKLIB) Make.glkterm
+
+cgunicod.o: cgunigen.c
 
 $(GLKLIB): $(GLKTERM_OBJS)
 	ar r $(GLKLIB) $(GLKTERM_OBJS)

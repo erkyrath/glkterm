@@ -264,7 +264,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         if (strlen(workingdir) + 1 + strlen(cx) >= BUFLEN) {
             gli_strict_warning("fileref_create_by_name: filename too long.");
             return NULL;
-	}
+        }
         sprintf(newbuf, "%s/%s", workingdir, cx);
     }
     
@@ -366,13 +366,13 @@ void glkunix_set_base_file(char *filename)
   
     for (ix=strlen(filename)-1; ix >= 0; ix--) 
         if (filename[ix] == '/')
-	    break;
+            break;
 
     if (ix >= 0) {
         /* There is a slash. */
         strncpy(workingdir, filename, ix);
-	workingdir[ix] = '\0';
-	ix++;
+        workingdir[ix] = '\0';
+        ix++;
     }
     else {
         /* No slash, just a filename. */
@@ -382,7 +382,7 @@ void glkunix_set_base_file(char *filename)
     strcpy(lastsavename, filename+ix);
     for (ix=strlen(lastsavename)-1; ix >= 0; ix--) 
         if (lastsavename[ix] == '.') 
-	    break;
+            break;
     if (ix >= 0)
         lastsavename[ix] = '\0';
     strcpy(lastscriptname, lastsavename);

@@ -55,7 +55,9 @@ struct glk_window_struct {
     stream_t *echostr; /* the window's echo stream, if any. */
     
     int line_request;
+    int line_request_uni;
     int char_request;
+    int char_request_uni;
 
     glui32 style;
     
@@ -72,6 +74,7 @@ struct glk_stream_struct {
     glui32 rock;
 
     int type; /* file, window, or memory stream */
+    int unicode; /* one-byte or four-byte chars? Not meaningful for windows */
     
     glui32 readcount, writecount;
     int readable, writable;
@@ -82,11 +85,16 @@ struct glk_stream_struct {
     /* for strtype_File */
     FILE *file; 
     
-    /* for strtype_Memory */
+    /* for strtype_Memory. Separate pointers for one-byte and four-byte
+       streams */
     unsigned char *buf;
     unsigned char *bufptr;
     unsigned char *bufend;
     unsigned char *bufeof;
+    glui32 *ubuf;
+    glui32 *ubufptr;
+    glui32 *ubufend;
+    glui32 *ubufeof;
     glui32 buflen;
     gidispatch_rock_t arrayrock;
 
@@ -212,6 +220,7 @@ extern void gli_stream_set_current(stream_t *str);
 extern void gli_stream_fill_result(stream_t *str, 
     stream_result_t *result);
 extern void gli_stream_echo_line(stream_t *str, char *buf, glui32 len);
+extern void gli_stream_echo_line_uni(stream_t *str, glui32 *buf, glui32 len);
 extern void gli_streams_close_all(void);
 
 extern fileref_t *gli_new_fileref(char *filename, glui32 usage, 
