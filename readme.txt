@@ -257,6 +257,8 @@ When closing windows, + signs can be left in the window borders.
 
 ###:
     Deleted long-obsolete check on the size of a pointer.
+    Fixed a bug that could leave cruft in a grid window that was
+    contracted and then expanded.
 
 0.8.0:
     Upgraded to Glk API version 0.7.0; added the Unicode functions.
