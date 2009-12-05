@@ -108,6 +108,15 @@ void win_textgrid_rearrange(window_t *win, grect_t *box)
                 return;
             init_lines(dwin, oldval, dwin->linessize, newwid);
         }
+        if (newhgt > dwin->height) {
+            for (jx=dwin->height; jx<newhgt; jx++) {
+                tgline_t *ln = &(dwin->lines[jx]);
+                for (ix=0; ix<ln->size; ix++) {
+                    ln->chars[ix] = ' ';
+                    ln->attrs[ix] = style_Normal;
+                }
+            }
+        }
         for (jx=0; jx<newhgt; jx++) {
             tgline_t *ln = &(dwin->lines[jx]);
             if (newwid > ln->size) {
