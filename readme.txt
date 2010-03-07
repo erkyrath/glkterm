@@ -256,6 +256,7 @@ When closing windows, + signs can be left in the window borders.
 * Version History
 
 ###:
+    Fixed file-creation bug in glk_stream_open_file().
     Deleted long-obsolete check on the size of a pointer.
     Fixed a bug that could leave cruft in a grid window that was
     contracted and then expanded.
