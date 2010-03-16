@@ -23,13 +23,14 @@ static int msgbuf_size = 0;
 void gli_msgline_warning(wchar_t *msg)
 {
     wchar_t buf[256];
+    int l;
     
     if (!pref_messageline)
         return;
     
     buf[0] = L'\0';
     wcsncat(buf, L"Glk library error: ", 256);
-    int l = wcslen(buf);
+    l = wcslen(buf);
     wcsncat(buf + l, msg, 256 - l);
     gli_msgline(buf);
 }

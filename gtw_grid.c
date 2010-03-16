@@ -293,6 +293,8 @@ void win_textgrid_putchar(window_t *win, wchar_t ch)
     window_textgrid_t *dwin = win->data;
     tgline_t *ln;
     size_t ch_width = wcwidth(ch);
+    int curx_offset;
+    size_t target_width;
 
     
     /* Canonicalize the cursor position. That is, the cursor may have been
@@ -319,7 +321,7 @@ void win_textgrid_putchar(window_t *win, wchar_t ch)
     ln = &(dwin->lines[dwin->cury]);
     
     /* We will use this repeatedly: */
-    int curx_offset = lnoffset(ln, dwin->curx);
+    curx_offset = lnoffset(ln, dwin->curx);
     
     /* What if we overlap with one or more 2-glyph characters? */
     /* N.B. we are assuming 2-glyph here.  We really should handle arbitrary glyph width */
@@ -340,7 +342,7 @@ void win_textgrid_putchar(window_t *win, wchar_t ch)
         setposdirty(dwin, ln, dwin->curx - 1, dwin->cury);
     }
 
-    size_t target_width = wcwidth(ln->chars[curx_offset]);
+    target_width = wcwidth(ln->chars[curx_offset]);
 
     /* Test for overlapping with the first half of a 2-glyph character */
     /* N.B. Because we have already dealt with any overlaps with a previous character
@@ -354,7 +356,7 @@ void win_textgrid_putchar(window_t *win, wchar_t ch)
             ln->chars[curx_offset + 1] = L'?';
             setposdirty(dwin, ln, dwin->curx + ch_width, dwin->cury);
         }
-	else {
+        else {
             /* Next character is narrow, so we'll cover it entirely. */
             memmove(ln->chars + curx_offset + 1, ln->chars + curx_offset + 2, (ln->size - curx_offset - 2) * sizeof(wchar_t));
             /* We don't need to fill in ln->chars[ln->width - 1], because it will never get printed. */

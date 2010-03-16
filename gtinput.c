@@ -334,9 +334,10 @@ static wchar_t *key_to_name(glui32 key)
 
     if (key >= 0 && key < 32) {
         /* swprintf(kbuf, 32, L"ctrl-%c", '@'+key); */
+        int l;
         kbuf[0] = L'\0';
         wcsncat(kbuf, L"ctrl-", 32);
-        int l = wcslen(kbuf);
+        l = wcslen(kbuf);
         kbuf[l] = UCS('@'+key);
         kbuf[l + 1] = L'\0';
         return kbuf;
