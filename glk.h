@@ -1,11 +1,11 @@
 #ifndef GLK_H
 #define GLK_H
 
-/* glk.h: Header file for Glk API, version 0.7.0.
+/* glk.h: Header file for Glk API, version 0.7.###.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
-    http://www.eblong.com/zarf/glk/index.html
+    http://eblong.com/zarf/glk/
 
-    This file is copyright 1998-2004 by Andrew Plotkin. You may copy,
+    This file is copyright 1998-2011 by Andrew Plotkin. You may copy,
     distribute, and incorporate it into your own programs, by any means
     and under any conditions, as long as you do not modify it. You may
     also modify this file, incorporate it into your own programs,
@@ -14,15 +14,21 @@
     shown above.
 */
 
-/* You may have to edit the definition of glui32 to make sure it's really a
-    32-bit unsigned integer type, and glsi32 to make sure it's really a
-    32-bit signed integer type. If they're not, horrible things will happen. */
-typedef unsigned int glui32;
-typedef signed int glsi32;
+/* If your system does not have <stdint.h>, you'll have to remove this
+    include line. Then edit the definition of glui32 to make sure it's
+    really a 32-bit unsigned integer type, and glsi32 to make sure
+    it's really a 32-bit signed integer type. If they're not, horrible
+    things will happen. */
+#include <stdint.h>
+typedef uint32_t glui32;
+typedef int32_t glsi32;
 
 /* These are the compile-time conditionals that reveal various Glk optional
     modules. */
+/*#### #define GLK_MODULE_LINE_ECHO */
+/*#### #define GLK_MODULE_LINE_TERMINATORS */
 #define GLK_MODULE_UNICODE
+#define GLK_MODULE_UNICODE_NORM
 #define GLK_MODULE_IMAGE
 #define GLK_MODULE_SOUND
 #define GLK_MODULE_HYPERLINKS
@@ -53,6 +59,10 @@ typedef struct glk_schannel_struct *schanid_t;
 #define gestalt_SoundMusic (13)
 #define gestalt_GraphicsTransparency (14)
 #define gestalt_Unicode (15)
+#define gestalt_UnicodeNorm (16)
+#define gestalt_LineInputEcho (17)
+#define gestalt_LineTerminators (18)
+#define gestalt_LineTerminatorKey (19)
 
 #define evtype_None (0)
 #define evtype_Timer (1)
@@ -132,6 +142,10 @@ typedef struct stream_result_struct {
 #define winmethod_Fixed (0x10)
 #define winmethod_Proportional (0x20)
 #define winmethod_DivisionMask (0xf0)
+
+#define winmethod_Border   (0x000)
+#define winmethod_NoBorder (0x100)
+#define winmethod_BorderMask (0x100)
 
 #define fileusage_Data (0x00)
 #define fileusage_SavedGame (0x01)
@@ -265,6 +279,15 @@ extern void glk_cancel_line_event(winid_t win, event_t *event);
 extern void glk_cancel_char_event(winid_t win);
 extern void glk_cancel_mouse_event(winid_t win);
 
+#ifdef GLK_MODULE_LINE_ECHO
+extern void glk_set_echo_line_event(winid_t win, glui32 val);
+#endif /* GLK_MODULE_LINE_ECHO */
+
+#ifdef GLK_MODULE_LINE_TERMINATORS
+extern void glk_set_terminators_line_event(winid_t win, glui32 *keycodes, 
+    glui32 count);
+#endif /* GLK_MODULE_LINE_TERMINATORS */
+
 #ifdef GLK_MODULE_UNICODE
 
 extern glui32 glk_buffer_to_lower_case_uni(glui32 *buf, glui32 len,
@@ -295,6 +318,15 @@ extern void glk_request_line_event_uni(winid_t win, glui32 *buf,
     glui32 maxlen, glui32 initlen);
 
 #endif /* GLK_MODULE_UNICODE */
+
+#ifdef GLK_MODULE_UNICODE_NORM
+
+extern glui32 glk_buffer_canon_decompose_uni(glui32 *buf, glui32 len,
+    glui32 numchars);
+extern glui32 glk_buffer_canon_normalize_uni(glui32 *buf, glui32 len,
+    glui32 numchars);
+
+#endif /* GLK_MODULE_UNICODE_NORM */
 
 #ifdef GLK_MODULE_IMAGE
 

@@ -341,14 +341,17 @@ strid_t glk_stream_open_file_uni(fileref_t *fref, glui32 fmode,
 
 #endif /* GLK_MODULE_UNICODE */
 
-strid_t gli_stream_open_pathname(char *pathname, int textmode, 
-    glui32 rock)
+strid_t gli_stream_open_pathname(char *pathname, int writemode, 
+    int textmode, glui32 rock)
 {
     char modestr[16];
     stream_t *str;
     FILE *fl;
     
-    strcpy(modestr, "r");
+    if (!writemode)
+        strcpy(modestr, "r");
+    else
+        strcpy(modestr, "w");
     if (!textmode)
         strcat(modestr, "b");
         
@@ -358,7 +361,7 @@ strid_t gli_stream_open_pathname(char *pathname, int textmode,
     }
 
     str = gli_new_stream(strtype_File, 
-        TRUE, FALSE, rock);
+        !writemode, writemode, rock);
     if (!str) {
         fclose(fl);
         return 0;
