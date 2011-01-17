@@ -125,6 +125,13 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
         case gestalt_SoundMusic:
             return FALSE;
   
+        case gestalt_LineInputEcho:
+            return TRUE;
+
+        case gestalt_LineTerminators:
+        case gestalt_LineTerminatorKey:
+            return FALSE; /*####*/
+
         default:
             return 0;
 

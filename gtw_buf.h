@@ -80,9 +80,10 @@ typedef struct window_textbuffer_struct {
     long scrollpos;
     long lastseenline;
     
-    /* for line input */
+    /* The following are meaningful only for the current line input request. */
     void *inbuf; /* char* or glui32*, depending on inunicode. */
     int inunicode;
+    int inecho;
     int inmax;
     long infence;
     long incurs;

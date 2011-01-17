@@ -212,6 +212,7 @@ window_t *gli_new_window(glui32 type, glui32 rock)
     win->line_request = FALSE;
     win->line_request_uni = FALSE;
     win->char_request_uni = FALSE;
+    win->echo_line_input = TRUE;
     win->style = style_Normal;
 
     win->str = gli_stream_open_window(win);
@@ -1228,6 +1229,26 @@ void gli_print_spaces(int len)
         local_addwstr(&(spacebuffer[NUMSPACES - len]));
     }
 }
+
+#ifdef GLK_MODULE_LINE_ECHO
+
+void glk_set_echo_line_event(window_t *win, glui32 val)
+{
+    win->echo_line_input = (val != 0);
+}
+
+#endif /* GLK_MODULE_LINE_ECHO */
+
+#ifdef GLK_MODULE_LINE_TERMINATORS
+
+void glk_set_terminators_line_event(window_t *win, glui32 *keycodes, 
+    glui32 count)
+{
+    /*####*/
+    gli_strict_warning("set_terminators_line_event: not supported.");
+}
+
+#endif /* GLK_MODULE_LINE_TERMINATORS */
 
 /* Keybinding functions. */
 

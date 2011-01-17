@@ -61,6 +61,7 @@ window_textbuffer_t *win_textbuffer_create(window_t *win)
 
     dwin->inbuf = NULL;
     dwin->inunicode = FALSE;
+    dwin->inecho = FALSE;
     
     dwin->numruns = 1;
     dwin->runs[0].style = style_Normal;
@@ -980,6 +981,7 @@ void win_textbuffer_init_line(window_t *win, void *buf, int unicode,
     dwin->inmax = maxlen;
     dwin->infence = dwin->numchars;
     dwin->incurs = dwin->numchars;
+    dwin->inecho = win->echo_line_input;
     dwin->origstyle = win->style;
     win->style = style_Input;
     set_last_run(dwin, win->style);
@@ -1000,7 +1002,7 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
 {
     long len;
     void *inbuf;
-    int inmax, inunicode;
+    int inmax, inunicode, inecho;
     gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
 
@@ -1011,9 +1013,9 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
     inmax = dwin->inmax;
     inarrayrock = dwin->inarrayrock;
     inunicode = dwin->inunicode;
+    inecho = dwin->inecho;
 
     len = dwin->numchars - dwin->infence;
-
     /* Store in event buffer. */
         
     if (len > inmax)
@@ -1021,13 +1023,19 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
         
     export_input_line(inbuf, inunicode, len, &dwin->chars[dwin->infence]);
 
-    if (win->echostr) {
-        if ( inunicode )
+    if (inecho && win->echostr) {
+        if (inunicode)
             gli_stream_echo_line_uni(win->echostr, inbuf, len);
         else
             gli_stream_echo_line(win->echostr, inbuf, len);
     }
-        
+
+    if (!inecho) {
+        /* Wipe the typed text from the buffer. */
+        put_text(dwin, L"", 0, dwin->infence, 
+            dwin->numchars - dwin->infence);
+    }
+    
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);
 
@@ -1038,8 +1046,10 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
     win->line_request = FALSE;
     dwin->inbuf = NULL;
     dwin->inmax = 0;
+    dwin->inecho = FALSE;
 
-    win_textbuffer_putchar(win, L'\n');
+    if (inecho)
+        win_textbuffer_putchar(win, L'\n');
     
     if (gli_unregister_arr) {
         char *typedesc = (inunicode ? "&+#!Iu" : "&+#!Cn");
@@ -1101,7 +1111,7 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     long len;
     wchar_t *cx;
     void *inbuf;
-    int inmax, inunicode;
+    int inmax, inunicode, inecho;
     gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
     
@@ -1112,6 +1122,7 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     inmax = dwin->inmax;
     inarrayrock = dwin->inarrayrock;
     inunicode = dwin->inunicode;
+    inecho = dwin->inecho;
 
     len = dwin->numchars - dwin->infence;
     
@@ -1146,11 +1157,17 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
         
     export_input_line(inbuf, inunicode, len, &dwin->chars[dwin->infence]);
 
-    if (win->echostr) {
-        if ( inunicode )
+    if (inecho && win->echostr) {
+        if (inunicode)
             gli_stream_echo_line_uni(win->echostr, inbuf, len);
         else
             gli_stream_echo_line(win->echostr, inbuf, len);
+    }
+
+    if (!inecho) {
+        /* Wipe the typed text from the buffer. */
+        put_text(dwin, L"", 0, dwin->infence, 
+            dwin->numchars - dwin->infence);
     }
     
     win->style = dwin->origstyle;
@@ -1160,8 +1177,10 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     win->line_request = FALSE;
     dwin->inbuf = NULL;
     dwin->inmax = 0;
-        
-    win_textbuffer_putchar(win, L'\n');
+    dwin->inecho = FALSE;
+
+    if (inecho)
+        win_textbuffer_putchar(win, L'\n');
 
     if (gli_unregister_arr) {
         char *typedesc = (inunicode ? "&+#!Iu" : "&+#!Cn");
