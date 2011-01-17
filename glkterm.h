@@ -59,6 +59,8 @@ struct glk_window_struct {
     int char_request;
     int char_request_uni;
 
+    int echo_line_input; /* applies to future line inputs, not the current */
+
     glui32 style;
     
     gidispatch_rock_t disprock;
