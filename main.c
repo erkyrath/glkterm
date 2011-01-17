@@ -188,7 +188,16 @@ int main(int argc, char *argv[])
             for (argform = glkunix_arguments; 
                 argform->argtype != glkunix_arg_End; 
                 argform++) {
-                printf("  %s\n", argform->desc);
+                if (strlen(argform->name) == 0)
+                    printf("  %s\n", argform->desc);
+                else if (argform->argtype == glkunix_arg_ValueFollows)
+                    printf("  %s val: %s\n", argform->name, argform->desc);
+                else if (argform->argtype == glkunix_arg_NumberValue)
+                    printf("  %s val: %s\n", argform->name, argform->desc);
+                else if (argform->argtype == glkunix_arg_ValueCanFollow)
+                    printf("  %s [val]: %s\n", argform->name, argform->desc);
+                else
+                    printf("  %s: %s\n", argform->name, argform->desc);
             }
         }
         printf("library options:\n");
@@ -342,10 +351,29 @@ static int string_to_bool(char *str)
     return -1;
 }
 
+/* This opens a file for reading or writing. (You cannot open a file
+   for appending using this call.)
+
+   This should be used only by glkunix_startup_code(). 
+*/
+strid_t glkunix_stream_open_pathname_gen(char *pathname, glui32 writemode,
+    glui32 textmode, glui32 rock)
+{
+    if (!inittime)
+        return 0;
+    return gli_stream_open_pathname(pathname, (writemode != 0), (textmode != 0), rock);
+}
+
+/* This opens a file for reading. It is a less-general form of 
+   glkunix_stream_open_pathname_gen(), preserved for backwards 
+   compatibility.
+
+   This should be used only by glkunix_startup_code().
+*/
 strid_t glkunix_stream_open_pathname(char *pathname, glui32 textmode, 
     glui32 rock)
 {
     if (!inittime)
         return 0;
-    return gli_stream_open_pathname(pathname, (textmode != 0), rock);
+    return gli_stream_open_pathname(pathname, FALSE, (textmode != 0), rock);
 }
