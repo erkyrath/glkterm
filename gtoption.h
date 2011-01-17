@@ -16,8 +16,8 @@
 
 /* Options: */
 
-#define LIBRARY_VERSION "0.8.1"
-#define LIBRARY_PORT "Local charset support (including utf-*) via GNU ncursesw"
+#define LIBRARY_VERSION "0.8.1-wide###"
+#define LIBRARY_PORT "Generic"
 
 /* If you change this code substantially, you should change the
     LIBRARY_PORT definition to something which explains what the
