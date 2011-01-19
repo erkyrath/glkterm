@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
 GlkTerm Library: version 0.8.1.
-Glk API which this implements: version 0.7.0.
+Glk API which this implements: version 0.7.0###.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://eblong.com/zarf/glk/index.html
 
@@ -41,8 +41,10 @@ Set this to "yes" to display all textgrid windows (status windows) in
 reverse text.
     -historylen NUM: The number of commands to keep in the command
 history of each window (default 20).
-    -border BOOL: Draw one-character borders between windows (default
-"yes"). These are lines of '-' and '|' characters. If you set this "no",
+    -border BOOL: Force one-character borders between windows. (The
+default is "yes", but some games switch these off. Set "yes" to force
+them on, or "no" to force them off, ignoring the game's request.)
+These are lines of '-' and '|' characters. Without the borders,
 there's a little more room for game text, but it may be hard to
 distinguish windows. The -revgrid option may help.
     -precise BOOL: More precise timing for timed input (default "no").

@@ -20,7 +20,8 @@ int pref_screenwidth = 0;
 int pref_screenheight = 0;
 int pref_messageline = TRUE;
 int pref_reverse_textgrids = FALSE;
-int pref_window_borders = TRUE;
+int pref_override_window_borders = FALSE;
+int pref_window_borders = FALSE;
 int pref_precise_timing = FALSE;
 int pref_historylen = 20;
 int pref_prompt_defaults = TRUE;
@@ -166,8 +167,10 @@ int main(int argc, char *argv[])
             pref_messageline = val;
         else if (extract_value(argc, argv, "revgrid", ex_Bool, &ix, &val, pref_reverse_textgrids))
             pref_reverse_textgrids = val;
-        else if (extract_value(argc, argv, "border", ex_Bool, &ix, &val, pref_window_borders))
+        else if (extract_value(argc, argv, "border", ex_Bool, &ix, &val, pref_window_borders)) {
             pref_window_borders = val;
+            pref_override_window_borders = TRUE;
+        }
         else if (extract_value(argc, argv, "defprompt", ex_Bool, &ix, &val, pref_prompt_defaults))
             pref_prompt_defaults = val;
 #ifdef OPT_TIMED_INPUT
@@ -206,7 +209,7 @@ int main(int argc, char *argv[])
         printf("  -ml BOOL: use message line (default 'yes')\n");
         printf("  -historylen NUM: length of command history (default 20)\n");
         printf("  -revgrid BOOL: reverse text in grid (status) windows (default 'no')\n");
-        printf("  -border BOOL: draw borders between windows (default 'yes')\n");
+        printf("  -border BOOL: force borders/no borders between windows\n");
         printf("  -defprompt BOOL: provide defaults for file prompts (default 'yes')\n");
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");

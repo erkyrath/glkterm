@@ -544,6 +544,8 @@ void glk_window_get_arrangement(window_t *win, glui32 *method, glui32 *size,
     dwin = win->data;
     
     val = dwin->dir | dwin->division;
+    if (!dwin->hasborder)
+        val |= winmethod_NoBorder;
     
     if (size)
         *size = dwin->size;
@@ -626,6 +628,7 @@ void glk_window_set_arrangement(window_t *win, glui32 method, glui32 size,
     dwin->division = method & winmethod_DivisionMask;
     dwin->key = key;
     dwin->size = size;
+    dwin->hasborder = ((method & winmethod_BorderMask) == winmethod_Border);
     
     dwin->vertical = (dwin->dir == winmethod_Left || dwin->dir == winmethod_Right);
     dwin->backward = (dwin->dir == winmethod_Left || dwin->dir == winmethod_Above);

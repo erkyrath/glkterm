@@ -166,6 +166,7 @@ extern int pref_screenwidth;
 extern int pref_screenheight;
 extern int pref_messageline;
 extern int pref_reverse_textgrids;
+extern int pref_override_window_borders;
 extern int pref_window_borders;
 extern int pref_precise_timing;
 extern int pref_historylen;
