@@ -294,6 +294,32 @@ static char *key_to_name(int key)
             return "end";
         case KEY_HELP:
             return "help";
+#ifdef KEY_F
+        case KEY_F(1):
+            return "func-1";
+        case KEY_F(2):
+            return "func-2";
+        case KEY_F(3):
+            return "func-3";
+        case KEY_F(4):
+            return "func-4";
+        case KEY_F(5):
+            return "func-5";
+        case KEY_F(6):
+            return "func-6";
+        case KEY_F(7):
+            return "func-7";
+        case KEY_F(8):
+            return "func-8";
+        case KEY_F(9):
+            return "func-9";
+        case KEY_F(10):
+            return "func-10";
+        case KEY_F(11):
+            return "func-11";
+        case KEY_F(12):
+            return "func-12";
+#endif /* KEY_F */
     }
 
     if (key >= 0 && key < 32) {
@@ -351,6 +377,44 @@ glui32 gli_input_from_native(int key)
   case KEY_END:
     arg = keycode_End;
     break;
+#ifdef KEY_F
+  case KEY_F(1):
+    arg = keycode_Func1;
+    break;
+  case KEY_F(2):
+    arg = keycode_Func2;
+    break;
+  case KEY_F(3):
+    arg = keycode_Func3;
+    break;
+  case KEY_F(4):
+    arg = keycode_Func4;
+    break;
+  case KEY_F(5):
+    arg = keycode_Func5;
+    break;
+  case KEY_F(6):
+    arg = keycode_Func6;
+    break;
+  case KEY_F(7):
+    arg = keycode_Func7;
+    break;
+  case KEY_F(8):
+    arg = keycode_Func8;
+    break;
+  case KEY_F(9):
+    arg = keycode_Func9;
+    break;
+  case KEY_F(10):
+    arg = keycode_Func10;
+    break;
+  case KEY_F(11):
+    arg = keycode_Func11;
+    break;
+  case KEY_F(12):
+    arg = keycode_Func12;
+    break;
+#endif /* KEY_F */
   default:
     if (key < 0 || key >= 256) {
       arg = keycode_Unknown;
@@ -376,7 +440,7 @@ void gli_input_handle_key(int key)
 {
     command_t *cmd = NULL;
     window_t *win = NULL;
-    
+
     /* First, see if the key has a general binding. */
     if (!cmd) {
         cmd = commands_always(key);
