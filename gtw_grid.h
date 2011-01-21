@@ -28,6 +28,7 @@ typedef struct window_textgrid_struct {
     void *inbuf; /* char* or glui32*, depending on inunicode. */
     int inunicode;
     int inorgx, inorgy;
+    glui32 intermkeys;
     int inoriglen, inmax;
     int incurs, inlen;
     glui32 origstyle;

@@ -460,6 +460,7 @@ void win_textgrid_init_line(window_t *win, void *buf, int unicode,
     dwin->incurs = 0;
     dwin->inorgx = dwin->curx;
     dwin->inorgy = dwin->cury;
+    dwin->intermkeys = win->terminate_line_input;
     dwin->origstyle = win->style;
     win->style = style_Input;
     
@@ -532,6 +533,7 @@ void win_textgrid_cancel_line(window_t *win, event_t *ev)
     dwin->inmax = 0;
     dwin->inorgx = 0;
     dwin->inorgy = 0;
+    dwin->intermkeys = 0;
 
     if (gli_unregister_arr) {
         char *typedesc = (inunicode ? "&+#!Iu" : "&+#!Cn");
@@ -591,11 +593,14 @@ void gcmd_grid_accept_key(window_t *win, glui32 arg)
     gli_event_store(evtype_CharInput, win, arg, 0);
 }
 
-/* Return or enter, during line input. Ends line input. */
+/* Return or enter, during line input. Ends line input.
+   Special terminator keys also land here (the curses key value
+   will be in arg). */
 void gcmd_grid_accept_line(window_t *win, glui32 arg)
 {
     void *inbuf;
     int inoriglen, inmax, inunicode;
+    glui32 termkey = 0;
     gidispatch_rock_t inarrayrock;
     window_textgrid_t *dwin = win->data;
     tgline_t *ln = &(dwin->lines[dwin->inorgy]);
@@ -622,13 +627,19 @@ void gcmd_grid_accept_line(window_t *win, glui32 arg)
     dwin->curx = 0;
     win->style = dwin->origstyle;
 
-    gli_event_store(evtype_LineInput, win, dwin->inlen, 0);
+    if (arg)
+        termkey = gli_input_from_native(arg);
+    else
+        termkey = 0;
+
+    gli_event_store(evtype_LineInput, win, dwin->inlen, termkey);
     win->line_request = FALSE;
     dwin->inbuf = NULL;
     dwin->inoriglen = 0;
     dwin->inmax = 0;
     dwin->inorgx = 0;
     dwin->inorgy = 0;
+    dwin->intermkeys = 0;
 
     if (gli_unregister_arr) {
         char *typedesc = (inunicode ? "&+#!Iu" : "&+#!Cn");

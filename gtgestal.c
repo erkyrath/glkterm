@@ -129,8 +129,15 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
             return TRUE;
 
         case gestalt_LineTerminators:
+            return TRUE;
         case gestalt_LineTerminatorKey:
-            return FALSE; /*####*/
+            /* GlkTerm never uses the escape or function keys for anything,
+               so we'll allow them to be line terminators. */
+            if (val == keycode_Escape)
+                return TRUE;
+            if (val >= keycode_Func12 && val <= keycode_Func1)
+                return TRUE;
+            return FALSE;
 
         default:
             return 0;

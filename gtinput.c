@@ -65,9 +65,10 @@ static command_t *commands_textgrid_char(glui32 key)
 }
 
 /* Keys for line input in a text grid window. */
-static command_t *commands_textgrid_line(glui32 key)
+static command_t *commands_textgrid_line(window_textgrid_t *dwin, glui32 key)
 {
     static command_t cmdacceptline = { gcmd_grid_accept_line, 0 };
+    static command_t cmdacceptlineterm = { gcmd_grid_accept_line, -1 };
     static command_t cmdinsert = { gcmd_grid_insert_key, -1 };
     static command_t cmdmoveleft = { gcmd_grid_move_cursor, gcmd_Left };
     static command_t cmdmoveright = { gcmd_grid_move_cursor, gcmd_Right };
@@ -104,6 +105,61 @@ static command_t *commands_textgrid_line(glui32 key)
             return &cmdkillline;
         case '\025': /* ctrl-U */
             return &cmdkillinput;
+
+        case '\033': /* escape */
+            if (dwin->intermkeys & 0x10000)
+                return &cmdacceptlineterm;
+            break;
+#ifdef KEY_F
+        case KEY_F(1):
+            if (dwin->intermkeys & (1<<1))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(2):
+            if (dwin->intermkeys & (1<<2))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(3):
+            if (dwin->intermkeys & (1<<3))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(4):
+            if (dwin->intermkeys & (1<<4))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(5):
+            if (dwin->intermkeys & (1<<5))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(6):
+            if (dwin->intermkeys & (1<<6))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(7):
+            if (dwin->intermkeys & (1<<7))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(8):
+            if (dwin->intermkeys & (1<<8))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(9):
+            if (dwin->intermkeys & (1<<9))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(10):
+            if (dwin->intermkeys & (1<<10))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(11):
+            if (dwin->intermkeys & (1<<11))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(12):
+            if (dwin->intermkeys & (1<<12))
+                return &cmdacceptlineterm;
+            break;
+#endif /* KEY_F */
     }
     
     /* Non-Latin1 glyphs valid in this locale */
@@ -158,9 +214,10 @@ static command_t *commands_textbuffer_char(glui32 key)
 }
 
 /* Keys for line input in a text buffer window. */
-static command_t *commands_textbuffer_line(glui32 key)
+static command_t *commands_textbuffer_line(window_textbuffer_t *dwin, glui32 key)
 {
     static command_t cmdacceptline = { gcmd_buffer_accept_line, 0 };
+    static command_t cmdacceptlineterm = { gcmd_buffer_accept_line, -1 };
     static command_t cmdinsert = { gcmd_buffer_insert_key, -1 };
     static command_t cmdmoveleft = { gcmd_buffer_move_cursor, gcmd_Left };
     static command_t cmdmoveright = { gcmd_buffer_move_cursor, gcmd_Right };
@@ -205,6 +262,61 @@ static command_t *commands_textbuffer_line(glui32 key)
         case keycode_Down:
         case '\016': /* ctrl-N */
             return &cmdhistorynext;
+
+        case '\033': /* escape */
+            if (dwin->intermkeys & 0x10000)
+                return &cmdacceptlineterm;
+            break;
+#ifdef KEY_F
+        case KEY_F(1):
+            if (dwin->intermkeys & (1<<1))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(2):
+            if (dwin->intermkeys & (1<<2))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(3):
+            if (dwin->intermkeys & (1<<3))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(4):
+            if (dwin->intermkeys & (1<<4))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(5):
+            if (dwin->intermkeys & (1<<5))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(6):
+            if (dwin->intermkeys & (1<<6))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(7):
+            if (dwin->intermkeys & (1<<7))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(8):
+            if (dwin->intermkeys & (1<<8))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(9):
+            if (dwin->intermkeys & (1<<9))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(10):
+            if (dwin->intermkeys & (1<<10))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(11):
+            if (dwin->intermkeys & (1<<11))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(12):
+            if (dwin->intermkeys & (1<<12))
+                return &cmdacceptlineterm;
+            break;
+#endif /* KEY_F */
     }
     
     if ( key >= 256 && iswprint(glui32_to_wchar(key)) )
@@ -221,13 +333,15 @@ static command_t *commands_window(window_t *win, glui32 key)
     command_t *cmd = NULL;
     
     switch (win->type) {
-        case wintype_TextGrid:
+        case wintype_TextGrid: {
+            window_textgrid_t *dwin = win->data;
             cmd = commands_textgrid(key);
             if (!cmd) {
                 if (win->line_request)
-                    cmd = commands_textgrid_line(key);
+                    cmd = commands_textgrid_line(dwin, key);
                 else if (win->char_request)
                     cmd = commands_textgrid_char(key);
+            }
             }
             break;
         case wintype_TextBuffer: {
@@ -239,7 +353,7 @@ static command_t *commands_window(window_t *win, glui32 key)
                 }
                 if (!cmd) {
                     if (win->line_request)
-                        cmd = commands_textbuffer_line(key);
+                        cmd = commands_textbuffer_line(dwin, key);
                     else if (win->char_request)
                         cmd = commands_textbuffer_char(key);
                 }
@@ -307,29 +421,29 @@ static wchar_t *key_to_name(glui32 key)
             return L"help";
         */
         case keycode_Func1:
-            return L"Function-1";
+            return L"func-1";
         case keycode_Func2:
-            return L"Function-2";
+            return L"func-2";
         case keycode_Func3:
-            return L"Function-3";
+            return L"func-3";
         case keycode_Func4:
-            return L"Function-4";
+            return L"func-4";
         case keycode_Func5:
-            return L"Function-5";
+            return L"func-5";
         case keycode_Func6:
-            return L"Function-6";
+            return L"func-6";
         case keycode_Func7:
-            return L"Function-7";
+            return L"func-7";
         case keycode_Func8:
-            return L"Function-8";
+            return L"func-8";
         case keycode_Func9:
-            return L"Function-9";
+            return L"func-9";
         case keycode_Func10:
-            return L"Function-10";
+            return L"func-10";
         case keycode_Func11:
-            return L"Function-11";
+            return L"func-11";
         case keycode_Func12:
-            return L"Function-12";
+            return L"func-12";
     }
 
     if (key >= 0 && key < 32) {
@@ -548,7 +662,7 @@ void gli_input_handle_key(glui32 key)
 {
     command_t *cmd = NULL;
     window_t *win = NULL;
-    
+
     /* First, see if the key has a general binding. */
     if (!cmd) {
         cmd = commands_always(key);

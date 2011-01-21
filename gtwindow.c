@@ -213,6 +213,7 @@ window_t *gli_new_window(glui32 type, glui32 rock)
     win->line_request_uni = FALSE;
     win->char_request_uni = FALSE;
     win->echo_line_input = TRUE;
+    win->terminate_line_input = 0;
     win->style = style_Normal;
 
     win->str = gli_stream_open_window(win);
@@ -1252,8 +1253,31 @@ void glk_set_echo_line_event(window_t *win, glui32 val)
 void glk_set_terminators_line_event(window_t *win, glui32 *keycodes, 
     glui32 count)
 {
-    /*####*/
-    gli_strict_warning("set_terminators_line_event: not supported.");
+    int ix;
+    glui32 res, val;
+
+    if (!win) {
+        gli_strict_warning("set_terminators_line_event: invalid ref");
+        return;
+    }
+    
+    /* We only allow escape and the function keys as line input terminators.
+       We encode those in a bitmask. */
+    res = 0;
+    if (keycodes) {
+        for (ix=0; ix<count; ix++) {
+            if (keycodes[ix] == keycode_Escape) {
+                res |= 0x10000;
+            }
+            else {
+                val = keycode_Func1 + 1 - keycodes[ix];
+                if (val >= 1 && val <= 12)
+                    res |= (1 << val);
+            }
+        }
+    }
+
+    win->terminate_line_input = res;
 }
 
 #endif /* GLK_MODULE_LINE_TERMINATORS */
