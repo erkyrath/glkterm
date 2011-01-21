@@ -1239,7 +1239,7 @@ void gli_print_spaces(int len)
 void glk_set_echo_line_event(window_t *win, glui32 val)
 {
     if (!win) {
-        gli_strict_warning("set_echo_line_event: invalid ref");
+        gli_strict_warning(L"set_echo_line_event: invalid ref");
         return;
     }
     
@@ -1257,7 +1257,7 @@ void glk_set_terminators_line_event(window_t *win, glui32 *keycodes,
     glui32 res, val;
 
     if (!win) {
-        gli_strict_warning("set_terminators_line_event: invalid ref");
+        gli_strict_warning(L"set_terminators_line_event: invalid ref");
         return;
     }
     
