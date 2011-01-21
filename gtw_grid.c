@@ -594,13 +594,13 @@ void gcmd_grid_accept_key(window_t *win, glui32 arg)
 }
 
 /* Return or enter, during line input. Ends line input.
-   Special terminator keys also land here (the curses key value
+   Special terminator keys also land here (the special key value
    will be in arg). */
 void gcmd_grid_accept_line(window_t *win, glui32 arg)
 {
     void *inbuf;
     int inoriglen, inmax, inunicode;
-    glui32 termkey = 0;
+    glui32 termkey = arg;
     gidispatch_rock_t inarrayrock;
     window_textgrid_t *dwin = win->data;
     tgline_t *ln = &(dwin->lines[dwin->inorgy]);
@@ -626,11 +626,6 @@ void gcmd_grid_accept_line(window_t *win, glui32 arg)
     dwin->cury = dwin->inorgy+1;
     dwin->curx = 0;
     win->style = dwin->origstyle;
-
-    if (arg)
-        termkey = gli_input_from_native(arg);
-    else
-        termkey = 0;
 
     gli_event_store(evtype_LineInput, win, dwin->inlen, termkey);
     win->line_request = FALSE;

@@ -107,59 +107,58 @@ static command_t *commands_textgrid_line(window_textgrid_t *dwin, glui32 key)
             return &cmdkillinput;
 
         case '\033': /* escape */
+        case keycode_Escape:
             if (dwin->intermkeys & 0x10000)
                 return &cmdacceptlineterm;
             break;
-#ifdef KEY_F
-        case KEY_F(1):
+        case keycode_Func1:
             if (dwin->intermkeys & (1<<1))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(2):
+        case keycode_Func2:
             if (dwin->intermkeys & (1<<2))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(3):
+        case keycode_Func3:
             if (dwin->intermkeys & (1<<3))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(4):
+        case keycode_Func4:
             if (dwin->intermkeys & (1<<4))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(5):
+        case keycode_Func5:
             if (dwin->intermkeys & (1<<5))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(6):
+        case keycode_Func6:
             if (dwin->intermkeys & (1<<6))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(7):
+        case keycode_Func7:
             if (dwin->intermkeys & (1<<7))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(8):
+        case keycode_Func8:
             if (dwin->intermkeys & (1<<8))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(9):
+        case keycode_Func9:
             if (dwin->intermkeys & (1<<9))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(10):
+        case keycode_Func10:
             if (dwin->intermkeys & (1<<10))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(11):
+        case keycode_Func11:
             if (dwin->intermkeys & (1<<11))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(12):
+        case keycode_Func12:
             if (dwin->intermkeys & (1<<12))
                 return &cmdacceptlineterm;
             break;
-#endif /* KEY_F */
     }
     
     /* Non-Latin1 glyphs valid in this locale */
@@ -264,59 +263,58 @@ static command_t *commands_textbuffer_line(window_textbuffer_t *dwin, glui32 key
             return &cmdhistorynext;
 
         case '\033': /* escape */
+        case keycode_Escape:
             if (dwin->intermkeys & 0x10000)
                 return &cmdacceptlineterm;
             break;
-#ifdef KEY_F
-        case KEY_F(1):
+        case keycode_Func1:
             if (dwin->intermkeys & (1<<1))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(2):
+        case keycode_Func2:
             if (dwin->intermkeys & (1<<2))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(3):
+        case keycode_Func3:
             if (dwin->intermkeys & (1<<3))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(4):
+        case keycode_Func4:
             if (dwin->intermkeys & (1<<4))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(5):
+        case keycode_Func5:
             if (dwin->intermkeys & (1<<5))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(6):
+        case keycode_Func6:
             if (dwin->intermkeys & (1<<6))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(7):
+        case keycode_Func7:
             if (dwin->intermkeys & (1<<7))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(8):
+        case keycode_Func8:
             if (dwin->intermkeys & (1<<8))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(9):
+        case keycode_Func9:
             if (dwin->intermkeys & (1<<9))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(10):
+        case keycode_Func10:
             if (dwin->intermkeys & (1<<10))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(11):
+        case keycode_Func11:
             if (dwin->intermkeys & (1<<11))
                 return &cmdacceptlineterm;
             break;
-        case KEY_F(12):
+        case keycode_Func12:
             if (dwin->intermkeys & (1<<12))
                 return &cmdacceptlineterm;
             break;
-#endif /* KEY_F */
     }
     
     if ( key >= 256 && iswprint(glui32_to_wchar(key)) )
@@ -701,7 +699,7 @@ void gli_input_handle_key(glui32 key)
         /* We found a binding. Run it. */
         glui32 arg;
         if (cmd->arg == -1) {
-            arg = (glui32)key;
+            arg = key;
         }
         else {
             arg = cmd->arg;
@@ -710,6 +708,7 @@ void gli_input_handle_key(glui32 key)
     }
     else {
         wchar_t buf[256];
+        buf[0] = L'\0';
         /* swprintf(buf, 256, L"The key <%ls> is not currently defined.", kbuf); */
         wcsncat(buf, L"The key <", 256);
         wcsncat(buf, key_to_name(key), 256 - wcslen(buf));

@@ -1109,7 +1109,7 @@ void gcmd_buffer_accept_key(window_t *win, glui32 arg)
 }
 
 /* Return or enter, during line input. Ends line input.
-   Special terminator keys also land here (the curses key value
+   Special terminator keys also land here (the special key value
    will be in arg). */
 void gcmd_buffer_accept_line(window_t *win, glui32 arg)
 {
@@ -1117,7 +1117,7 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     wchar_t *cx;
     void *inbuf;
     int inmax, inunicode, inecho;
-    glui32 termkey = 0;
+    glui32 termkey = arg;
     gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
     
@@ -1178,11 +1178,6 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);
-
-    if (arg)
-        termkey = gli_input_from_native(arg);
-    else
-        termkey = 0;
 
     gli_event_store(evtype_LineInput, win, len, termkey);
     win->line_request = FALSE;
