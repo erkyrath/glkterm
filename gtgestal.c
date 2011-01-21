@@ -42,7 +42,8 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
             if (val <= 0xFFFFFFFF && val > (0xFFFFFFFF - keycode_MAXVAL)) {
                 /* Special key code. We conservatively declare that only the
                     arrow keys, return, del/backspace, and escape can be
-                    typed. */
+                    typed. Function keys might work, but we can't be
+                    sure they're there. */
                 if (val == keycode_Left || val == keycode_Right
                     || val == keycode_Up || val == keycode_Down
                     || val == keycode_Return || val == keycode_Delete
@@ -116,8 +117,15 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
             return TRUE;
 
         case gestalt_LineTerminators:
+            return TRUE;
         case gestalt_LineTerminatorKey:
-            return FALSE; /*####*/
+            /* GlkTerm never uses the escape or function keys for anything,
+               so we'll allow them to be line terminators. */
+            if (val == keycode_Escape)
+                return TRUE;
+            if (val >= keycode_Func12 && val <= keycode_Func1)
+                return TRUE;
+            return FALSE;
 
         default:
             return 0;

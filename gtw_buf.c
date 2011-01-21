@@ -60,6 +60,7 @@ window_textbuffer_t *win_textbuffer_create(window_t *win)
     dwin->inbuf = NULL;
     dwin->inunicode = FALSE;
     dwin->inecho = FALSE;
+    dwin->intermkeys = 0;
     
     dwin->numruns = 1;
     dwin->runs[0].style = style_Normal;
@@ -973,6 +974,7 @@ void win_textbuffer_init_line(window_t *win, void *buf, int unicode,
     dwin->infence = dwin->numchars;
     dwin->incurs = dwin->numchars;
     dwin->inecho = win->echo_line_input;
+    dwin->intermkeys = win->terminate_line_input;
     dwin->origstyle = win->style;
     win->style = style_Input;
     set_last_run(dwin, win->style);
@@ -1034,6 +1036,7 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
     dwin->inbuf = NULL;
     dwin->inmax = 0;
     dwin->inecho = FALSE;
+    dwin->intermkeys = 0;
 
     if (inecho)
         win_textbuffer_putchar(win, '\n');
@@ -1099,7 +1102,9 @@ void gcmd_buffer_accept_key(window_t *win, glui32 arg)
     gli_event_store(evtype_CharInput, win, arg, 0);
 }
 
-/* Return or enter, during line input. Ends line input. */
+/* Return or enter, during line input. Ends line input.
+   Special terminator keys also land here (the curses key value
+   will be in arg). */
 void gcmd_buffer_accept_line(window_t *win, glui32 arg)
 {
     int ix;
@@ -1107,6 +1112,7 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     char *cx;
     void *inbuf;
     int inmax, inunicode, inecho;
+    glui32 termkey = 0;
     gidispatch_rock_t inarrayrock;
     window_textbuffer_t *dwin = win->data;
     
@@ -1163,11 +1169,17 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
     win->style = dwin->origstyle;
     set_last_run(dwin, win->style);
 
-    gli_event_store(evtype_LineInput, win, len, 0);
+    if (arg)
+        termkey = gli_input_from_native(arg);
+    else
+        termkey = 0;
+
+    gli_event_store(evtype_LineInput, win, len, termkey);
     win->line_request = FALSE;
     dwin->inbuf = NULL;
     dwin->inmax = 0;
     dwin->inecho = FALSE;
+    dwin->intermkeys = 0;
 
     if (inecho)
         win_textbuffer_putchar(win, '\n');

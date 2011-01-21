@@ -83,6 +83,7 @@ typedef struct window_textbuffer_struct {
     void *inbuf; /* char* or glui32*, depending on inunicode. */
     int inunicode;
     int inecho;
+    glui32 intermkeys;
     int inmax;
     long infence;
     long incurs;

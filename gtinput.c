@@ -63,9 +63,10 @@ static command_t *commands_textgrid_char(int key)
 }
 
 /* Keys for line input in a text grid window. */
-static command_t *commands_textgrid_line(int key)
+static command_t *commands_textgrid_line(window_textgrid_t *dwin, int key)
 {
     static command_t cmdacceptline = { gcmd_grid_accept_line, 0 };
+    static command_t cmdacceptlineterm = { gcmd_grid_accept_line, -1 };
     static command_t cmdinsert = { gcmd_grid_insert_key, -1 };
     static command_t cmdmoveleft = { gcmd_grid_move_cursor, gcmd_Left };
     static command_t cmdmoveright = { gcmd_grid_move_cursor, gcmd_Right };
@@ -106,6 +107,61 @@ static command_t *commands_textgrid_line(int key)
             return &cmdkillline;
         case '\025': /* ctrl-U */
             return &cmdkillinput;
+
+        case '\033': /* escape */
+            if (dwin->intermkeys & 0x10000)
+                return &cmdacceptlineterm;
+            break;
+#ifdef KEY_F
+        case KEY_F(1):
+            if (dwin->intermkeys & (1<<1))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(2):
+            if (dwin->intermkeys & (1<<2))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(3):
+            if (dwin->intermkeys & (1<<3))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(4):
+            if (dwin->intermkeys & (1<<4))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(5):
+            if (dwin->intermkeys & (1<<5))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(6):
+            if (dwin->intermkeys & (1<<6))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(7):
+            if (dwin->intermkeys & (1<<7))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(8):
+            if (dwin->intermkeys & (1<<8))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(9):
+            if (dwin->intermkeys & (1<<9))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(10):
+            if (dwin->intermkeys & (1<<10))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(11):
+            if (dwin->intermkeys & (1<<11))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(12):
+            if (dwin->intermkeys & (1<<12))
+                return &cmdacceptlineterm;
+            break;
+#endif /* KEY_F */
     }
     return NULL;
 }
@@ -155,9 +211,10 @@ static command_t *commands_textbuffer_char(int key)
 }
 
 /* Keys for line input in a text buffer window. */
-static command_t *commands_textbuffer_line(int key)
+static command_t *commands_textbuffer_line(window_textbuffer_t *dwin, int key)
 {
     static command_t cmdacceptline = { gcmd_buffer_accept_line, 0 };
+    static command_t cmdacceptlineterm = { gcmd_buffer_accept_line, -1 };
     static command_t cmdinsert = { gcmd_buffer_insert_key, -1 };
     static command_t cmdmoveleft = { gcmd_buffer_move_cursor, gcmd_Left };
     static command_t cmdmoveright = { gcmd_buffer_move_cursor, gcmd_Right };
@@ -206,6 +263,61 @@ static command_t *commands_textbuffer_line(int key)
         case KEY_DOWN:
         case '\016': /* ctrl-N */
             return &cmdhistorynext;
+
+        case '\033': /* escape */
+            if (dwin->intermkeys & 0x10000)
+                return &cmdacceptlineterm;
+            break;
+#ifdef KEY_F
+        case KEY_F(1):
+            if (dwin->intermkeys & (1<<1))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(2):
+            if (dwin->intermkeys & (1<<2))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(3):
+            if (dwin->intermkeys & (1<<3))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(4):
+            if (dwin->intermkeys & (1<<4))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(5):
+            if (dwin->intermkeys & (1<<5))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(6):
+            if (dwin->intermkeys & (1<<6))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(7):
+            if (dwin->intermkeys & (1<<7))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(8):
+            if (dwin->intermkeys & (1<<8))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(9):
+            if (dwin->intermkeys & (1<<9))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(10):
+            if (dwin->intermkeys & (1<<10))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(11):
+            if (dwin->intermkeys & (1<<11))
+                return &cmdacceptlineterm;
+            break;
+        case KEY_F(12):
+            if (dwin->intermkeys & (1<<12))
+                return &cmdacceptlineterm;
+            break;
+#endif /* KEY_F */
     }
     return NULL;
 }
@@ -218,13 +330,15 @@ static command_t *commands_window(window_t *win, int key)
     command_t *cmd = NULL;
     
     switch (win->type) {
-        case wintype_TextGrid:
+        case wintype_TextGrid: {
+            window_textgrid_t *dwin = win->data;
             cmd = commands_textgrid(key);
             if (!cmd) {
                 if (win->line_request)
-                    cmd = commands_textgrid_line(key);
+                    cmd = commands_textgrid_line(dwin, key);
                 else if (win->char_request)
                     cmd = commands_textgrid_char(key);
+            }
             }
             break;
         case wintype_TextBuffer: {
@@ -236,7 +350,7 @@ static command_t *commands_window(window_t *win, int key)
                 }
                 if (!cmd) {
                     if (win->line_request)
-                        cmd = commands_textbuffer_line(key);
+                        cmd = commands_textbuffer_line(dwin, key);
                     else if (win->char_request)
                         cmd = commands_textbuffer_char(key);
                 }
