@@ -62,7 +62,7 @@ for timed input, this option will be removed.)
 NUM values can be any number. BOOL values can be "yes" or "no", or no
 value to toggle.
 
-Future versions of GlkTerm will have options to control display styles,
+Future versions of GlkTerm may have options to control display styles,
 window border styles, and maybe other delightful things.
 
 * Notes on building this mess:
@@ -321,7 +321,7 @@ When closing windows, + signs can be left in the window borders.
 
 * Permissions
 
-The source code in this package is copyright 1998-2000 by Andrew Plotkin. You
+The source code in this package is copyright 1998-2011 by Andrew Plotkin. You
 may copy and distribute it freely, by any means and under any conditions,
 as long as the code and documentation is not changed. You may also
 incorporate this code into your own program and distribute that, or modify
