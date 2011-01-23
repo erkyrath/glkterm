@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
 GlkTerm Library: version 0.8.1.
-Glk API which this implements: version 0.7.0###.
+Glk API which this implements: version 0.7.1.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://eblong.com/zarf/glk/index.html
 
