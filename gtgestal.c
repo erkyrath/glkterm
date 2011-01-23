@@ -27,7 +27,8 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
     switch (id) {
         
         case gestalt_Version:
-            return 0x00000700;
+            /* This implements Glk spec version 0.7.1. */
+            return 0x00000701;
         
         case gestalt_LineInput:
             /*
