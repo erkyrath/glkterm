@@ -16,7 +16,7 @@
 
 /* Options: */
 
-#define LIBRARY_VERSION "0.8.1###"
+#define LIBRARY_VERSION "1.0.0"
 #define LIBRARY_PORT "Generic"
 
 /* If you change this code substantially, you should change the
