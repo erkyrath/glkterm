@@ -257,6 +257,9 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+1.0.###:
+    Fixed a bug in Unicode normalization (thanks David Fletcher).
+
 1.0.0:
     Support for all the Glk 0.7.1 features: window borders, line input
     terminator keys, line input echo control, Unicode normalization.
