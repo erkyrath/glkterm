@@ -258,6 +258,7 @@ When closing windows, + signs can be left in the window borders.
 * Version History
 
 1.0.###:
+    Added the date-time functions (Glk 0.7.2).
     Fixed bugs in Unicode normalization and case-changing (thanks David 
     Fletcher and David Kinder).
 
