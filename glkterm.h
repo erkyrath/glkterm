@@ -141,6 +141,22 @@ extern window_t *gli_focuswin;
 extern grect_t content_box;
 extern void (*gli_interrupt_handler)(void);
 
+/* The following typedefs are copied from cheapglk.h. They support the
+   tables declared in cgunigen.c. */
+
+typedef glui32 gli_case_block_t[2]; /* upper, lower */
+/* If both are 0xFFFFFFFF, you have to look at the special-case table */
+
+typedef glui32 gli_case_special_t[3]; /* upper, lower, title */
+/* Each of these points to a subarray of the unigen_special_array
+   (in cgunicode.c). In that subarray, element zero is the length,
+   and that's followed by length unicode values. */
+
+typedef glui32 gli_decomp_block_t[2]; /* count, position */
+/* The position points to a subarray of the unigen_decomp_array.
+   If the count is zero, there is no decomposition. */
+
+
 #ifdef OPT_USE_SIGNALS
     extern int just_resumed;
     extern int just_killed;

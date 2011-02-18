@@ -32,7 +32,7 @@ GLKTERM_OBJS = \
   main.o gtevent.o gtfref.o gtgestal.o gtinput.o \
   gtmessag.o gtmessin.o gtmisc.o gtstream.o gtstyle.o \
   gtw_blnk.o gtw_buf.o gtw_grid.o gtw_pair.o gtwindow.o \
-  gtschan.o gtblorb.o cgunicod.o gi_dispa.o gi_blorb.o \
+  gtschan.o gtblorb.o cgunicod.o cgdate.o gi_dispa.o gi_blorb.o \
   gtncursesw.o
 
 GLKTERM_HEADERS = \
