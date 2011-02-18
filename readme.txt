@@ -258,7 +258,8 @@ When closing windows, + signs can be left in the window borders.
 * Version History
 
 1.0.###:
-    Fixed a bug in Unicode normalization (thanks David Fletcher).
+    Fixed bugs in Unicode normalization and case-changing (thanks David 
+    Fletcher and David Kinder).
 
 1.0.0:
     Support for all the Glk 0.7.1 features: window borders, line input

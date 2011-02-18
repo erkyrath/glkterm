@@ -129,21 +129,6 @@ glui32 gli_parse_utf8(unsigned char *buf, glui32 buflen,
 
 #ifdef GLK_MODULE_UNICODE
 
-/* The following typedefs are copied from cheapglk.h. They support the
-   tables declared in cgunigen.c. */
-
-typedef glui32 gli_case_block_t[2]; /* upper, lower */
-/* If both are 0xFFFFFFFF, you have to look at the special-case table */
-
-typedef glui32 gli_case_special_t[3]; /* upper, lower, title */
-/* Each of these points to a subarray of the unigen_special_array
-   (in cgunicode.c). In that subarray, element zero is the length,
-   and that's followed by length unicode values. */
-
-typedef glui32 gli_decomp_block_t[2]; /* count, position */
-/* The position points to a subarray of the unigen_decomp_array.
-   If the count is zero, there is no decomposition. */
-
 /* The cgunigen.c file is generated from Unicode data tables, and it's
    sort of enormous. Feel free to implement all these case-changing and
    normalization functions using your OS's native facilities. */
@@ -158,6 +143,12 @@ typedef glui32 gli_decomp_block_t[2]; /* count, position */
 #define COND_ALL (0)
 #define COND_LINESTART (1)
 
+/* Apply a case change to the buffer. The len is the length of the buffer
+   array; numchars is the number of characters originally in it. (This
+   may be less than len.) The result will be clipped to fit len, but
+   the return value will be the full number of characters that the
+   converted string should have contained.
+*/
 static glui32 gli_buffer_change_case(glui32 *buf, glui32 len,
     glui32 numchars, int destcase, int cond, int changerest)
 {
@@ -264,8 +255,11 @@ static glui32 gli_buffer_change_case(glui32 *buf, glui32 len,
     }
 
     if (newoutbuf) {
-        if (outcount)
-            memcpy(buf, newoutbuf, outcount * sizeof(glui32));
+        glui32 finallen = outcount;
+        if (finallen > len)
+            finallen = len;
+        if (finallen)
+            memcpy(buf, newoutbuf, finallen * sizeof(glui32));
         free(newoutbuf);
     }
 
@@ -289,8 +283,8 @@ glui32 glk_buffer_to_upper_case_uni(glui32 *buf, glui32 len,
 glui32 glk_buffer_to_title_case_uni(glui32 *buf, glui32 len,
     glui32 numchars, glui32 lowerrest)
 {
-    return gli_buffer_change_case(buf, len, numchars, CASE_TITLE, 
-        COND_LINESTART, lowerrest);
+    return gli_buffer_change_case(buf, len, numchars, 
+        CASE_TITLE, COND_LINESTART, lowerrest);
 }
 
 #endif /* GLK_MODULE_UNICODE */
@@ -308,6 +302,7 @@ static glui32 combining_class(glui32 ch)
 
 /* This returns a new buffer (possibly longer), containing the decomposed
    form of the original buffer. The caller must free the returned buffer.
+   On exit, *numcharsref contains the size of the returned buffer.
    The original buffer is unchanged.
 */
 static glui32 *gli_buffer_canon_decompose_uni(glui32 *buf, 
