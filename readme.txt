@@ -257,6 +257,11 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+###:
+    Fixed a really stupid bug where glk_put_char_uni() was sending text
+    to stdout instead of curses, thus destroying the screen. (Master
+    branch only; widechar branch was correct.)
+
 1.0.1:
     Added the date-time functions (Glk 0.7.2).
     Fixed bugs in Unicode normalization and case-changing (thanks David 
