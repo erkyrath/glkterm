@@ -593,7 +593,7 @@ static void gli_put_char_uni(stream_t *str, glui32 ch)
                 gli_strict_warning("put_char_uni: window has pending line request");
                 break;
             }
-            putc((ch & 0xFF), stdout);
+            gli_window_put_char(str->win, ((ch >= 0x100) ? '?' : ch));
             if (str->win->echostr)
                 gli_put_char_uni(str->win->echostr, ch);
             break;
