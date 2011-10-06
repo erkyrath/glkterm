@@ -263,6 +263,8 @@ When closing windows, + signs can be left in the window borders.
     branch only; widechar branch was correct.)
     In gi_dispa.c, fixed a notation that was preventing stream_open_memory
     and stream_open_memory_uni from accepting a null array argument.
+    Fixed get_line_stream() to include the terminal null when reading
+    from a Unicode stream.
 
 1.0.1:
     Added the date-time functions (Glk 0.7.2).
