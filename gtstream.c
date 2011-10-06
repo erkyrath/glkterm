@@ -38,6 +38,7 @@ stream_t *gli_new_stream(int type, int readable, int writable,
     
     str->win = NULL;
     str->file = NULL;
+    str->lastop = 0;
     str->buf = NULL;
     str->bufptr = NULL;
     str->bufend = NULL;
@@ -97,6 +98,7 @@ void gli_delete_stream(stream_t *str)
             /* close the FILE */
             fclose(str->file);
             str->file = NULL;
+            str->lastop = 0;
             break;
     }
 
@@ -232,6 +234,11 @@ strid_t glk_stream_open_file(fileref_t *fref, glui32 fmode,
        WriteAppend cases. (We use "a" so as not to truncate, and "b" 
        because we're going to close it immediately, so it doesn't matter.) */
 
+    /* Another Unix quirk: in r+ mode, you're not supposed to flip from
+       reading to writing or vice versa without doing an fseek. We will
+       track the most recent operation (as lastop) -- Write, Read, or
+       0 if either is legal next. */
+
     if (fmode == filemode_ReadWrite || fmode == filemode_WriteAppend) {
         fl = fopen(fref->filename, "ab");
         if (!fl) {
@@ -283,6 +290,7 @@ strid_t glk_stream_open_file(fileref_t *fref, glui32 fmode,
     }
     
     str->file = fl;
+    str->lastop = 0;
     
     return str;
 }
@@ -367,6 +375,7 @@ strid_t gli_stream_open_pathname(char *pathname, int writemode,
     }
     
     str->file = fl;
+    str->lastop = 0;
     
     return str;
 }
@@ -465,6 +474,8 @@ void glk_stream_set_position(stream_t *str, glsi32 pos, glui32 seekmode)
             /* do nothing; don't pass to echo stream */
             break;
         case strtype_File:
+            /* Either reading or writing is legal after an fseek. */
+            str->lastop = 0;
             if (str->unicode) {
                 /* Use 4 here, rather than sizeof(glui32). */
                 pos *= 4;
@@ -505,6 +516,17 @@ glui32 glk_stream_get_position(stream_t *str)
     }   
 }
 
+static void gli_stream_ensure_op(stream_t *str, glui32 op)
+{
+    /* We have to do an fseek() between reading and writing. This will
+       only come up for ReadWrite or WriteAppend files. */
+    if (str->lastop != 0 && str->lastop != op) {
+        long pos = ftell(str->file);
+        fseek(str->file, pos, SEEK_SET);
+    }
+    str->lastop = op;
+}
+
 static void gli_put_char(stream_t *str, unsigned char ch)
 {
     if (!str || !str->writable)
@@ -541,6 +563,7 @@ static void gli_put_char(stream_t *str, unsigned char ch)
                 gli_put_char(str->win->echostr, ch);
             break;
         case strtype_File:
+            gli_stream_ensure_op(str, filemode_Write);
             /* Really, if the stream was opened in text mode, we ought to do 
                 character-set conversion here. As it is we're printing a
                 file of Latin-1 characters. */
@@ -598,6 +621,7 @@ static void gli_put_char_uni(stream_t *str, glui32 ch)
                 gli_put_char_uni(str->win->echostr, ch);
             break;
         case strtype_File:
+            gli_stream_ensure_op(str, filemode_Write);
             if (!str->unicode) {
                 if (ch >= 0x100)
                     ch = '?';
@@ -683,6 +707,7 @@ static void gli_put_buffer(stream_t *str, char *buf, glui32 len)
                 gli_put_buffer(str->win->echostr, buf, len);
             break;
         case strtype_File:
+            gli_stream_ensure_op(str, filemode_Write);
             /* Really, if the stream was opened in text mode, we ought to do 
                 character-set conversion here. As it is we're printing a
                 file of Latin-1 characters. */
@@ -784,6 +809,7 @@ static glsi32 gli_get_char(stream_t *str, int want_unicode)
                 }
             }
         case strtype_File: 
+            gli_stream_ensure_op(str, filemode_Read);
             if (!str->unicode) {
                 int res;
                 res = getc(str->file);
@@ -902,6 +928,7 @@ static glui32 gli_get_buffer(stream_t *str, char *cbuf, glui32 *ubuf,
             str->readcount += len;
             return len;
         case strtype_File: 
+            gli_stream_ensure_op(str, filemode_Read);
             if (!str->unicode) {
                 if (cbuf) {
                     glui32 res;
@@ -1048,6 +1075,7 @@ static glui32 gli_get_line(stream_t *str, char *cbuf, glui32 *ubuf,
             str->readcount += lx;
             return lx;
         case strtype_File: 
+            gli_stream_ensure_op(str, filemode_Read);
             if (!str->unicode) {
                 if (cbuf) {
                     char *res;

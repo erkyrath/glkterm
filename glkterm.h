@@ -87,6 +87,7 @@ struct glk_stream_struct {
     
     /* for strtype_File */
     FILE *file; 
+    glui32 lastop; /* 0, filemode_Write, or filemode_Read */
     
     /* for strtype_Memory. Separate pointers for one-byte and four-byte
        streams */
