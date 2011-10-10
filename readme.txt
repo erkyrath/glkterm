@@ -1,7 +1,7 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 1.0.1.
-Glk API which this implements: version 0.7.2.
+GlkTerm Library: version 1.0.2.
+Glk API which this implements: version 0.7.3.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://eblong.com/zarf/glk/index.html
 
@@ -257,7 +257,7 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
-###:
+1.0.2:
     Fixed a really stupid bug where glk_put_char_uni() was sending text
     to stdout instead of curses, thus destroying the screen.
     Fixed a bug with reading and writing to the same file without a
@@ -266,6 +266,7 @@ When closing windows, + signs can be left in the window borders.
     and stream_open_memory_uni from accepting a null array argument.
     Fixed get_line_stream() to include the terminal null when reading
     from a Unicode stream.
+    Added stubs for the improved sound functions (Glk 0.7.3).
 
 1.0.1:
     Added the date-time functions (Glk 0.7.2).
