@@ -1,9 +1,9 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 1.0.2.
-Glk API which this implements: version 0.7.3.
+GlkTerm Library: version 1.0.3.
+Glk API which this implements: version 0.7.4.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
-http://eblong.com/zarf/glk/index.html
+http://eblong.com/zarf/glk/
 
 This is source code for an implementation of the Glk library which runs
 in a terminal window, using the curses.h library for screen control.
@@ -256,6 +256,12 @@ to page.
 When closing windows, + signs can be left in the window borders.
 
 * Version History
+
+1.0.3:
+    Added the Blorb-resource functions (Glk 0.7.4).
+    External filenames now follow the new spec recommendations: standard
+    filename suffixes, and removing more questionable characters in
+    fileref_create_by_name().
 
 1.0.2:
     Fixed a really stupid bug where glk_put_char_uni() was sending text

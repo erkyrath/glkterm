@@ -23,8 +23,8 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
     switch (id) {
         
         case gestalt_Version:
-            /* This implements Glk spec version 0.7.3. */
-            return 0x00000703;
+            /* This implements Glk spec version 0.7.4. */
+            return 0x00000704;
         
         case gestalt_LineInput:
             if ((val >= 0 && val < 32) || val == '\177') {
