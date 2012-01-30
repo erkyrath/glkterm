@@ -339,7 +339,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         return NULL;
     }
 
-    if (cx[0] == '/') {
+    if (cx[0] == '/')
         strcpy(newbuf, cx);
     else
         sprintf(newbuf, "%s/%s", workingdir, cx);
