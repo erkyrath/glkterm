@@ -391,7 +391,7 @@ strid_t glk_stream_open_resource(glui32 filenum, glui32 rock)
     str = gli_new_stream(strtype_Resource,
         TRUE, FALSE, rock);
     if (!str) {
-        gli_strict_warning("stream_open_resource: unable to create stream.");
+        gli_strict_warning(L"stream_open_resource: unable to create stream.");
         return NULL;
     }
 
@@ -432,7 +432,7 @@ strid_t glk_stream_open_resource_uni(glui32 filenum, glui32 rock)
     str = gli_new_stream(strtype_Resource, 
         TRUE, FALSE, rock);
     if (!str) {
-        gli_strict_warning("stream_open_resource_uni: unable to create stream.");
+        gli_strict_warning(L"stream_open_resource_uni: unable to create stream.");
         return NULL;
     }
     
