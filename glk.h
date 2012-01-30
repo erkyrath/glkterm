@@ -1,11 +1,11 @@
 #ifndef GLK_H
 #define GLK_H
 
-/* glk.h: Header file for Glk API, version 0.7.3.
+/* glk.h: Header file for Glk API, version 0.7.4.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://eblong.com/zarf/glk/
 
-    This file is copyright 1998-2011 by Andrew Plotkin. You may copy,
+    This file is copyright 1998-2012 by Andrew Plotkin. You may copy,
     distribute, and incorporate it into your own programs, by any means
     and under any conditions, as long as you do not modify it. You may
     also modify this file, incorporate it into your own programs,
@@ -35,6 +35,7 @@ typedef int32_t glsi32;
 #define GLK_MODULE_SOUND2
 #define GLK_MODULE_HYPERLINKS
 #define GLK_MODULE_DATETIME
+#define GLK_MODULE_RESOURCE_STREAM
 
 /* These types are opaque object identifiers. They're pointers to opaque
     C structures, which are defined differently by each library. */
@@ -68,6 +69,7 @@ typedef struct glk_schannel_struct *schanid_t;
 #define gestalt_LineTerminatorKey (19)
 #define gestalt_DateTime (20)
 #define gestalt_Sound2 (21)
+#define gestalt_ResourceStream (22)
 
 #define evtype_None (0)
 #define evtype_Timer (1)
@@ -429,5 +431,12 @@ extern glsi32 glk_date_to_simple_time_utc(glkdate_t *date, glui32 factor);
 extern glsi32 glk_date_to_simple_time_local(glkdate_t *date, glui32 factor);
 
 #endif /* GLK_MODULE_DATETIME */
+
+#ifdef GLK_MODULE_RESOURCE_STREAM
+
+extern strid_t glk_stream_open_resource(glui32 filenum, glui32 rock);
+extern strid_t glk_stream_open_resource_uni(glui32 filenum, glui32 rock);
+
+#endif /* GLK_MODULE_RESOURCE_STREAM */
 
 #endif /* GLK_H */

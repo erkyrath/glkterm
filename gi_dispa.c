@@ -1,8 +1,8 @@
-/* gi_dispa.c: Dispatch layer for Glk API, version 0.7.3.
+/* gi_dispa.c: Dispatch layer for Glk API, version 0.7.4.
     Designed by Andrew Plotkin <erkyrath@eblong.com>
     http://eblong.com/zarf/glk/
 
-    This file is copyright 1998-2011 by Andrew Plotkin. You may copy,
+    This file is copyright 1998-2012 by Andrew Plotkin. You may copy,
     distribute, and incorporate it into your own programs, by any means
     and under any conditions, as long as you do not modify it. You may
     also modify this file, incorporate it into your own programs,
@@ -80,6 +80,7 @@ static gidispatch_intconst_t intconstant_table[] = {
     { "gestalt_LineTerminatorKey", (19) },
     { "gestalt_LineTerminators", (18) },
     { "gestalt_MouseInput", (4) },
+    { "gestalt_ResourceStream", (22) },
     { "gestalt_Sound", (8) },
     { "gestalt_Sound2", (21) },
     { "gestalt_SoundMusic", (13) },
@@ -316,6 +317,10 @@ static gidispatch_function_t function_table[] = {
     { 0x016E, glk_date_to_simple_time_utc, "date_to_simple_time_utc" },
     { 0x016F, glk_date_to_simple_time_local, "date_to_simple_time_local" },
 #endif /* GLK_MODULE_DATETIME */
+#ifdef GLK_MODULE_RESOURCE_STREAM
+    { 0x0049, glk_stream_open_resource, "stream_open_resource" },
+    { 0x013A, glk_stream_open_resource_uni, "stream_open_resource_uni" },
+#endif /* GLK_MODULE_RESOURCE_STREAM */
 };
 
 glui32 gidispatch_count_classes()
@@ -653,6 +658,13 @@ char *gidispatch_prototype(glui32 funcnum)
         case 0x016F: /* date_to_simple_time_local */
             return "3>+[8IsIsIsIsIsIsIsIs]Iu:Is";
 #endif /* GLK_MODULE_DATETIME */
+
+#ifdef GLK_MODULE_RESOURCE_STREAM
+        case 0x0049: /* stream_open_resource */
+            return "3IuIu:Qb";
+        case 0x013A: /* stream_open_resource_uni */
+            return "3IuIu:Qb";
+#endif /* GLK_MODULE_RESOURCE_STREAM */
 
         default:
             return NULL;
@@ -1471,6 +1483,15 @@ void gidispatch_call(glui32 funcnum, glui32 numargs, gluniversal_t *arglist)
             }
             break;
 #endif /* GLK_MODULE_DATETIME */
+
+#ifdef GLK_MODULE_RESOURCE_STREAM
+        case 0x0049: /* stream_open_resource */
+            arglist[3].opaqueref = glk_stream_open_resource(arglist[0].uint, arglist[1].uint);
+            break;
+        case 0x013A: /* stream_open_resource_uni */
+            arglist[3].opaqueref = glk_stream_open_resource_uni(arglist[0].uint, arglist[1].uint);
+            break;
+#endif /* GLK_MODULE_RESOURCE_STREAM */
 
         default:
             /* do nothing */

@@ -25,10 +25,10 @@ static fileref_t *gli_filereflist = NULL;
 #define BUFLEN (256)
 
 static char workingdir[BUFLEN] = ".";
-static char lastsavename[BUFLEN] = "game.sav";
+static char lastsavename[BUFLEN] = "game.glksave";
 static char lastscriptname[BUFLEN] = "script.txt";
 static char lastcmdname[BUFLEN] = "commands.txt";
-static char lastdataname[BUFLEN] = "file.dat";
+static char lastdataname[BUFLEN] = "file.glkdata";
 
 int gli_wcs_from_mbs(wchar_t *wcsbuf, int len, const char *mbsbuf)
 {
@@ -136,6 +136,21 @@ void glk_fileref_destroy(fileref_t *fref)
     gli_delete_fileref(fref);
 }
 
+static char *gli_suffix_for_usage(glui32 usage)
+{
+    switch (usage & fileusage_TypeMask) {
+        case fileusage_Data:
+            return ".glkdata";
+        case fileusage_SavedGame:
+            return ".glksave";
+        case fileusage_Transcript:
+        case fileusage_InputRecord:
+            return ".txt";
+        default:
+            return "";
+    }
+}
+
 frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
 {
     char *filename;
@@ -180,46 +195,42 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
 {
     fileref_t *fref;
     char buf[BUFLEN];
-    char buf2[BUFLEN];
+    char buf2[2*BUFLEN+10];
     int len;
     char *cx;
+    char *suffix;
     
-    len = strlen(name);
-    if (len > BUFLEN-1)
-        len = BUFLEN-1;
-    
-    /* Take out all '/' characters, and make sure the length is greater 
-        than zero. Again, this is the right behavior in Unix. 
-        DOS/Windows might want to take out '\' instead, unless the
-        stdio library converts slashes for you. They'd also want to trim 
-        to 8 characters. Remember, the overall goal is to make a legal 
-        platform-native filename, without any extra directory 
-        components.
-       Suffixes are another sore point. Really, the game program 
-        shouldn't have a suffix on the name passed to this function. So
-        in DOS/Windows, this function should chop off dot-and-suffix,
-        if there is one, and then add a dot and a three-letter suffix
-        appropriate to the file type (as gleaned from the usage 
-        argument.)
+    /* The new spec recommendations: delete all characters in the
+       string "/\<>:|?*" (including quotes). Truncate at the first
+       period. Change to "null" if there's nothing left. Then append
+       an appropriate suffix: ".glkdata", ".glksave", ".txt".
     */
     
-    memcpy(buf, name, len);
-    if (len == 0) {
-        buf[0] = 'X';
-        len++;
+    for (cx=name, len=0; (*cx && *cx!='.' && len<BUFLEN-1); cx++) {
+        switch (*cx) {
+            case '"':
+            case '\\':
+            case '/':
+            case '>':
+            case '<':
+            case ':':
+            case '|':
+            case '?':
+            case '*':
+                break;
+            default:
+                buf[len++] = *cx;
+        }
     }
     buf[len] = '\0';
-    
-    for (cx=buf; *cx; cx++) {
-        if (*cx == '/')
-            *cx = '-';
+
+    if (len == 0) {
+        strcpy(buf, "null");
+        len = strlen(buf);
     }
     
-    if (len + 1 + strlen(workingdir) >= BUFLEN) {
-        gli_strict_warning(L"fileref_create_by_name: filename too long.");
-        return NULL;
-    }
-    sprintf(buf2, "%s/%s", workingdir, buf);
+    suffix = gli_suffix_for_usage(usage);
+    sprintf(buf2, "%s/%s%s", workingdir, buf, suffix);
 
     fref = gli_new_fileref(buf2, usage, rock);
     if (!fref) {
@@ -235,10 +246,11 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 {
     fileref_t *fref;
     struct stat sbuf;
-    char buf[BUFLEN], newbuf[BUFLEN];
+    char buf[BUFLEN];
+    char newbuf[2*BUFLEN+10];
     wchar_t prbuf[BUFLEN], wcsbuf[BUFLEN];
     char *cx;
-    int ix, val;
+    int ix, val, gotdot;
     char *prompt, *prompt2, *lastbuf;
     glui32 response;
     
@@ -300,6 +312,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         return NULL;
     }
     
+    /* Trim whitespace from end and beginning. */
     wcsbuf[val] = L'\0';
     
     val = gli_mbs_from_wcs(buf, BUFLEN, wcsbuf);
@@ -328,15 +341,22 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
 
     if (cx[0] == '/') {
         strcpy(newbuf, cx);
-        cx = newbuf;
-    }
-    else {
-        if (strlen(workingdir) + 1 + strlen(cx) >= BUFLEN) {
-            gli_strict_warning(L"fileref_create_by_name: filename too long.");
-            return NULL;
-        }
+    else
         sprintf(newbuf, "%s/%s", workingdir, cx);
-        cx = newbuf + strlen(workingdir) + 1;
+    
+    /* If there is no dot-suffix, add a standard one. */
+    val = strlen(newbuf);
+    gotdot = FALSE;
+    while (val && (buf[val-1] != '/')) {
+        if (buf[val-1] == '.') {
+            gotdot = TRUE;
+            break;
+        }
+        val--;
+    }
+    if (!gotdot) {
+        char *suffix = gli_suffix_for_usage(usage);
+        strcat(newbuf, suffix);
     }
     
     if (fmode != filemode_Read) {
@@ -467,8 +487,8 @@ void glkunix_set_base_file(char *filename)
     strcpy(lastscriptname, lastsavename);
     strcpy(lastdataname, lastsavename);
     
-    strcat(lastsavename, ".sav");
-    strcat(lastscriptname, ".txt");
-    strcat(lastdataname, ".dat");
+    strcat(lastsavename, gli_suffix_for_usage(fileusage_SavedGame));
+    strcat(lastscriptname, gli_suffix_for_usage(fileusage_Transcript));
+    strcat(lastdataname, gli_suffix_for_usage(fileusage_Data));
 }
 
