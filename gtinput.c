@@ -176,8 +176,8 @@ static command_t *commands_textbuffer(glui32 key)
 {
     static command_t cmdscrolltotop = { gcmd_buffer_scroll, gcmd_UpEnd };
     static command_t cmdscrolltobottom = { gcmd_buffer_scroll, gcmd_DownEnd };
-    static command_t cmdscrollupline = { gcmd_buffer_scroll, gcmd_Up };
-    static command_t cmdscrolldownline = { gcmd_buffer_scroll, gcmd_Down };
+    /*static command_t cmdscrollupline = { gcmd_buffer_scroll, gcmd_Up };
+      static command_t cmdscrolldownline = { gcmd_buffer_scroll, gcmd_Down };*/
     static command_t cmdscrolluppage = { gcmd_buffer_scroll, gcmd_UpPage };
     static command_t cmdscrolldownpage = { gcmd_buffer_scroll, gcmd_DownPage };
 
