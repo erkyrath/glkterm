@@ -257,6 +257,10 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+1.0.###
+    Fixed a bug in the "overwrite file?" prompt. (I introduced this in
+    1.0.3, widechar only.)
+
 1.0.3:
     Added the Blorb-resource functions (Glk 0.7.4).
     External filenames now follow the new spec recommendations: standard
