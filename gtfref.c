@@ -247,6 +247,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     fileref_t *fref;
     struct stat sbuf;
     char buf[BUFLEN];
+    char buf2[BUFLEN+32];
     char newbuf[2*BUFLEN+10];
     wchar_t prbuf[BUFLEN], wcsbuf[BUFLEN];
     char *cx;
@@ -361,8 +362,8 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     
     if (fmode != filemode_Read) {
         if (!stat(newbuf, &sbuf) && S_ISREG(sbuf.st_mode)) {
-            sprintf(buf, "Overwrite \"%s\"? [y/n] ", cx);
-            val = gli_wcs_from_mbs(prbuf, BUFLEN, buf);
+            sprintf(buf2, "Overwrite \"%s\"? [y/n] ", cx);
+            val = gli_wcs_from_mbs(prbuf, BUFLEN, buf2);
             if ( val < 0 ) {
                 if ( val == -1 )
                     gli_strict_warning(L"fileref_create_by_prompt: invalid confirmation prompt.");
