@@ -477,7 +477,7 @@ int gli_legal_keycode(glui32 key)
         case keycode_Down:
             return has_key(glui32_to_wchar(KEY_DOWN));
         case keycode_Return:
-            return has_key(glui32_to_wchar(KEY_ENTER));
+            return TRUE;
         case keycode_Delete:
             return has_key(glui32_to_wchar(KEY_BACKSPACE) || has_key(glui32_to_wchar(KEY_DC)));
         case keycode_Escape:
