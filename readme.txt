@@ -257,6 +257,10 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+###:
+    Updated the Blorb-resource functions to understand FORM chunks
+    (Glk 0.7.4 amendment).
+
 1.0.3:
     Added the Blorb-resource functions (Glk 0.7.4).
     External filenames now follow the new spec recommendations: standard
