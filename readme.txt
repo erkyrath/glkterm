@@ -262,6 +262,8 @@ When closing windows, + signs can be left in the window borders.
     1.0.3, widechar only.)
     Fixed a bug where the return key wasn't accepted in key input.
     (Again, widechar only.)
+    Updated the Blorb-resource functions to understand FORM chunks
+    (Glk 0.7.4 amendment).
 
 1.0.3:
     Added the Blorb-resource functions (Glk 0.7.4).
