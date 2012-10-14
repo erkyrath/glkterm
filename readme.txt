@@ -1,6 +1,6 @@
 GlkTerm: Curses.h Implementation of the Glk API.
 
-GlkTerm Library: version 1.0.3.
+GlkTerm Library: version 1.0.4.
 Glk API which this implements: version 0.7.4.
 Designed by Andrew Plotkin <erkyrath@eblong.com>
 http://eblong.com/zarf/glk/
@@ -257,7 +257,7 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
-1.0.###
+1.0.4:
     Fixed a bug in the "overwrite file?" prompt. (I introduced this in
     1.0.3, widechar only.)
     Fixed a bug where the return key wasn't accepted in key input.
