@@ -260,6 +260,8 @@ When closing windows, + signs can be left in the window borders.
 ###:
     Updated the Blorb-resource functions to understand FORM chunks
     (Glk 0.7.4 amendment).
+    Added stub for autosave/autorestore hooks. (This library does not
+    support autosave, however.)
 
 1.0.3:
     Added the Blorb-resource functions (Glk 0.7.4).
