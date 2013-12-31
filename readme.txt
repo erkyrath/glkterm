@@ -257,6 +257,10 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+1.0.5###:
+    Fixed a struct initialization bug in gli_date_to_tm(). (I think this
+    caused no problems in practice.)
+
 1.0.4:
     Updated the Blorb-resource functions to understand FORM chunks
     (Glk 0.7.4 amendment).
