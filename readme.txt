@@ -257,6 +257,10 @@ When closing windows, + signs can be left in the window borders.
 
 * Version History
 
+1.0.5###:
+    Fixed a struct initialization bug in gli_date_to_tm(). (I think this
+    caused no problems in practice.)
+
 1.0.4:
     Fixed a bug in the "overwrite file?" prompt. (I introduced this in
     1.0.3, widechar only.)
