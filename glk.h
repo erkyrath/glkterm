@@ -43,10 +43,10 @@ typedef int32_t glsi32;
     and simply "#define GLK_ATTRIBUTE_NORETURN". */
 #if defined(__GNUC__) || defined(__clang__)
 #define GLK_ATTRIBUTE_NORETURN __attribute__((__noreturn__))
-#endif // defined(__GNUC__) || defined(__clang__)
+#endif /* defined(__GNUC__) || defined(__clang__) */
 #ifndef GLK_ATTRIBUTE_NORETURN
 #define GLK_ATTRIBUTE_NORETURN
-#endif // GLK_ATTRIBUTE_NORETURN
+#endif /* GLK_ATTRIBUTE_NORETURN */
 
 /* These types are opaque object identifiers. They're pointers to opaque
     C structures, which are defined differently by each library. */
@@ -81,6 +81,7 @@ typedef struct glk_schannel_struct *schanid_t;
 #define gestalt_DateTime (20)
 #define gestalt_Sound2 (21)
 #define gestalt_ResourceStream (22)
+#define gestalt_GraphicsCharInput (23)
 
 #define evtype_None (0)
 #define evtype_Timer (1)
