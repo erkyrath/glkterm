@@ -24,6 +24,9 @@ typedef struct window_pair_struct {
     
 } window_pair_t;
 
+extern int win_separator_styleattrs[style_NUMSTYLES];
+extern int win_separator_styles[style_NUMSTYLES][3];
+
 extern window_pair_t *win_pair_create(window_t *win, glui32 method, 
     window_t *key, glui32 size);
 extern void win_pair_destroy(window_pair_t *dwin);

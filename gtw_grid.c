@@ -25,7 +25,23 @@ static void import_input_line(tgline_t *ln, int offset, void *buf,
     int unicode, long len);
 
 /* Array of curses.h attribute values, one for each style. */
-chtype win_textgrid_styleattrs[style_NUMSTYLES];
+int win_textgrid_styleattrs[style_NUMSTYLES];
+
+/* Curses foreground, background and attribute information, one for each style. */
+int win_textgrid_styles[style_NUMSTYLES][3]={
+    /*                   fg   bg  attrs */
+    /* Normal */       { -1,  -1, 0},
+    /* Emphasized */   { -1,  -1, A_UNDERLINE },
+    /* Preformatted */ { -1,  -1, 0},
+    /* Header */       { -1,  -1, A_BOLD },
+    /* Subheader */    { -1,  -1, A_BOLD },
+    /* Alert */        { -1,  -1, A_REVERSE },
+    /* Note */         { -1,  -1, A_UNDERLINE },
+    /* BlockQuote */   { -1,  -1, 0},
+    /* Input */        { -1,  -1, A_BOLD },
+    /* User1 */        { -1,  -1, 0},
+    /* User2 */        { -1,  -1, 0}
+};
 
 /* This macro sets the appropriate dirty values, when a single character
     (at px, py) is changed. */

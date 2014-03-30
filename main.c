@@ -30,13 +30,50 @@ int pref_prompt_defaults = TRUE;
 #define ex_Void (0)
 #define ex_Int (1)
 #define ex_Bool (2)
+#define ex_String (3)
 
 static int errflag = FALSE;
 static int inittime = FALSE;
 
 static int extract_value(int argc, char *argv[], char *optname, int type,
     int *argnum, int *result, int defval);
+static int extract_value_string(int argc, char *argv[], char *optname, int type,
+    int *argnum, const char **result);
 static int string_to_bool(char *str);
+static int parse_style_file(const char *filename);
+
+/* glk style names in order of constant */
+static const char *style_names[] = {
+    "Normal",
+    "Emphasized",
+    "Preformatted",
+    "Header",
+    "Subheader",
+    "Alert",
+    "Note",
+    "BlockQuote",
+    "Input",
+    "User1",
+    "User2",
+    NULL
+};
+
+/* curses attributes by name */
+static const struct {
+    const char *name;
+    int bit;
+} style_attributes[] = {
+    {"STANDOUT", A_STANDOUT},
+    {"UNDERLINE", A_UNDERLINE},
+    {"REVERSE", A_REVERSE},
+    {"BLINK", A_BLINK},
+    {"DIM", A_DIM},
+    {"BOLD", A_BOLD},
+    {"ALTCHARSET", A_ALTCHARSET},
+    {"INVIS", A_INVIS},
+    {"PROTECT", A_PROTECT},
+    {NULL}
+};
 
 int main(int argc, char *argv[])
 {
@@ -53,7 +90,7 @@ int main(int argc, char *argv[])
         printf("Compile-time error: glui32 is not unsigned. Please fix glk.h.\n");
         return 1;
     }
-    
+
     /* Now some argument-parsing. This is probably going to hurt. */
     startdata.argc = 0;
     startdata.argv = (char **)malloc(argc * sizeof(char *));
@@ -142,7 +179,7 @@ int main(int argc, char *argv[])
             errflag = TRUE;
             break;
         }
-        
+        const char *strval;
         if (extract_value(argc, argv, "?", ex_Void, &ix, &val, FALSE))
             errflag = TRUE;
         else if (extract_value(argc, argv, "help", ex_Void, &ix, &val, FALSE))
@@ -177,6 +214,10 @@ int main(int argc, char *argv[])
         else if (extract_value(argc, argv, "precise", ex_Bool, &ix, &val, pref_precise_timing))
             pref_precise_timing = val;
 #endif /* !OPT_TIMED_INPUT */
+        else if (extract_value_string(argc, argv, "style", ex_String, &ix, &strval)) {
+            if (!parse_style_file(strval))
+                return 1;
+        }
         else {
             printf("%s: unknown option: %s\n", argv[0], argv[ix]);
             errflag = TRUE;
@@ -214,6 +255,7 @@ int main(int argc, char *argv[])
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");
 #endif /* !OPT_TIMED_INPUT */
+        printf("  -style FILENAME: read visual styles from provided file\n");
         printf("  -version: display Glk library version\n");
         printf("  -help: display this list\n");
         printf("NUM values can be any number. BOOL values can be 'yes' or 'no', or no value to toggle.\n");
@@ -330,9 +372,52 @@ static int extract_value(int argc, char *argv[], char *optname, int type,
                 val = !defval;
             *result = val;
             return TRUE;
-            
-    }
+    } 
     
+    return FALSE;
+}
+
+/* extract_value call for strings arguments.
+ * The 'type' argument must always be ex_String.
+ * returns a pointer to the argument in-place. This pointer is only valid as long as the
+ * argv pointer is valid, and does not need to be freed.
+ */
+static int extract_value_string(int argc, char *argv[], char *optname, int type,
+    int *argnum, const char **result)
+{
+    int optlen, val;
+    char *cx, *origcx, firstch;
+    
+    optlen = strlen(optname);
+    origcx = argv[*argnum];
+    cx = origcx;
+    
+    firstch = *cx;
+    cx++;
+    
+    if (strncmp(cx, optname, optlen))
+        return FALSE;
+    
+    cx += optlen;
+    
+    switch (type) {
+        case ex_String:
+            if (*cx == '\0') {
+                if ((*argnum)+1 >= argc) {
+                    return FALSE;
+                }
+                else {
+                    *result = argv[(*argnum)+1];
+                    *argnum += 1;
+                    return TRUE;
+                }
+            }
+            else {
+                *result = cx;
+                return TRUE;
+            }
+            return TRUE;
+    }
     return FALSE;
 }
 
@@ -380,3 +465,176 @@ strid_t glkunix_stream_open_pathname(char *pathname, glui32 textmode,
         return 0;
     return gli_stream_open_pathname(pathname, FALSE, (textmode != 0), rock);
 }
+
+/* Parse 'Style = fg,bg,attrs' tuple */
+static int parse_style_key_value(int linenr, const char *key, char *value, int styles[style_NUMSTYLES][3])
+{
+    int style_id = 0;
+
+    for (style_id = 0; style_names[style_id]; ++style_id)
+        if (!strcmp(style_names[style_id], key))
+            break;
+    if (!style_names[style_id])
+    {
+        printf("Unknown style id %s on line %i\n", key, linenr);
+        return 0;
+    }
+
+    char *fg_str = value;
+    char *bg_str = strchr(fg_str, ',');
+    if(bg_str == NULL)
+    {
+        printf("Missing background color on line %i\n", linenr);
+        return 0;
+    }
+    *bg_str = 0; /* terminate with zero */
+    bg_str++;
+    char *attrs_str = strchr(bg_str, ',');
+    if(attrs_str == NULL)
+    {
+        printf("Missing attributes on line %i\n", linenr);
+        return 0;
+    }
+    *attrs_str = 0; /* terminate with zero and advance */
+    attrs_str++;
+
+    /* parse attributes list */
+    int attrs = 0;
+    char *token;
+    while (token = strtok(attrs_str, " "))
+    {
+        int attr_id;
+        for (attr_id = 0; style_attributes[attr_id].name; ++attr_id)
+            if (!strcmp(style_attributes[attr_id].name, token))
+                break;
+        if (!style_attributes[attr_id].name)
+        {
+            printf("Unknown attribute %s on line %i\n", token, linenr);
+            return 0;
+        }
+        attrs |= style_attributes[attr_id].bit;
+        attrs_str = NULL;
+    }
+
+    styles[style_id][0] = atoi(fg_str);
+    styles[style_id][1] = atoi(bg_str);
+    styles[style_id][2] = attrs;
+    return TRUE;
+}
+
+extern int win_textgrid_styles[style_NUMSTYLES][3];
+extern int win_textbuffer_styles[style_NUMSTYLES][3];
+extern int win_separator_styles[style_NUMSTYLES][3];
+#define LINESIZE 1000
+/* Simple parser for 'curses style sheet'. An example:
+
+    [textbuffer]
+    Normal        = -1, -1,
+    Emphasized    = -1, -1, UNDERLINE
+    Preformatted  = -1, -1,
+    Header        = -1, -1, BOLD
+    Subheader     = -1, -1, BOLD
+    Alert         = -1, -1, REVERSE
+    Note          = -1, -1, UNDERLINE
+    BlockQuote    = -1, -1,
+    Input         = -1, -1, BOLD
+    User1         = -1, -1,
+    User2         = -1, -1,
+
+    [textgrid]
+    ...
+ */
+static int parse_style_file(const char *filename)
+{
+    FILE *f;
+    char line[LINESIZE];
+    int linenr = 1;
+    int (*styles)[3] = NULL;
+
+    f = fopen(filename, "r");
+    if (f == NULL)
+    {
+        printf("Could not open style file %s\n", filename);
+        return FALSE;
+    }
+    while (fgets(line, LINESIZE, f))
+    {
+        char *ptr = line;
+        /* '#' begins a comment - ignore comments */
+        char *eol = strchr(line, '#');
+        if(!eol) /* fgets leaves the newline */
+            eol = strchr(line, '\n');
+        if(!eol)
+            eol = line + strlen(line);
+        *eol = 0;
+
+        /* skip spaces at beginning of line */
+        while (*ptr && isspace(*ptr))
+            ptr++;
+
+        if (*ptr == '[') /* [textbuffer] */
+        {
+            ptr++;
+            const char *cat_name = &*ptr;
+            while (*ptr && *ptr != ']')
+                ptr++;
+            if (*ptr != ']')
+            {
+                printf("Unterminated category name on line %i\n", linenr);
+                return FALSE;
+            }
+            *ptr = 0;
+            ptr++;
+            if (!strcmp(cat_name, "textbuffer"))
+            {
+                styles = win_textbuffer_styles;
+            } else if (!strcmp(cat_name, "textgrid"))
+            {
+                styles = win_textgrid_styles;
+            } else if (!strcmp(cat_name, "separator"))
+            {
+                styles = win_separator_styles;
+            } else
+            {
+                printf("Unknown category name on line %i: %s\n", linenr, cat_name);
+                return FALSE;
+            }
+        } else if (*ptr) {
+            /* non-empty line: key = value */
+            if(!styles)
+            {
+                printf("Assignment without category on line %i\n", linenr);
+            }
+            const char *key = &*ptr;
+            while (*ptr && !isspace(*ptr))
+                ptr++;
+            char *end_of_key = &*ptr;
+            while (*ptr && isspace(*ptr))
+                ptr++;
+            if(!*ptr || *ptr != '=')
+            {
+                printf("Invalid or missing assignment on line %i\n", linenr);
+                return FALSE;
+            }
+            *end_of_key = 0; /* make sure that key is zero-terminated */
+            ptr += 1;
+            while (*ptr && isspace(*ptr)) /* skip spaces after '=' */
+                ptr += 1;
+            if(!parse_style_key_value(linenr, key, &*ptr, styles))
+                return FALSE;
+            ptr = eol;
+        }
+        while (*ptr && isspace(*ptr))
+            ptr++;
+        if (*ptr)
+        {
+            printf("Garbage at end of line %i: %s\n", linenr, &*ptr);
+            return FALSE;
+        }
+        linenr += 1;
+    }
+    fclose(f);
+    return TRUE;
+}
+
+

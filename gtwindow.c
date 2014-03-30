@@ -7,6 +7,7 @@
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef OPT_USE_SIGNALS
 #include <signal.h>
@@ -54,6 +55,25 @@ static void compute_content_box(void);
 
 #endif /* OPT_USE_SIGNALS */
 
+/* initialize a single ncurses style from the fg/bg/attributes table */
+static void gli_initialize_curses_style(int window, int ix, int styles[style_NUMSTYLES][3], int *win_styleattrs)
+{
+    int fg = styles[ix][0];
+    int bg = styles[ix][1];
+    chtype val = styles[ix][2];
+    if ((window==1) && pref_reverse_textgrids)
+        val ^= A_REVERSE;
+#ifdef OPT_USE_COLORS
+    if(fg != -1 || bg != -1) /* Only use a color pair if not defaults */
+    {
+        int pair = 1 + window * style_NUMSTYLES + ix;
+        init_pair(pair, fg, bg);
+        val |= COLOR_PAIR(pair);
+    }
+#endif
+    win_styleattrs[ix] = val;
+}
+
 /* Set up the window system. This is called from main(). */
 void gli_initialize_windows()
 {
@@ -66,21 +86,12 @@ void gli_initialize_windows()
     for (ix=0; ix<NUMSPACES; ix++)
         spacebuffer[ix] = ' ';
     spacebuffer[NUMSPACES] = '\0';
-    
     /* Create the curses.h attribute values for each style. */
+    int nextpair = 1;
     for (ix=0; ix<style_NUMSTYLES; ix++) {
-        chtype val = 0;
-        if (ix == style_Emphasized || ix == style_Note)
-            val |= A_UNDERLINE;
-        if (ix == style_Alert)
-            val |= A_REVERSE;
-        if (ix == style_Header || ix == style_Subheader || ix == style_Input)
-            val |= A_BOLD;
-        
-        win_textbuffer_styleattrs[ix] = val;
-        if (pref_reverse_textgrids)
-            val ^= A_REVERSE;
-        win_textgrid_styleattrs[ix] = val;
+        gli_initialize_curses_style(0, ix, win_textbuffer_styles, win_textbuffer_styleattrs);
+        gli_initialize_curses_style(1, ix, win_textgrid_styles, win_textgrid_styleattrs);
+        gli_initialize_curses_style(2, ix, win_separator_styles, win_separator_styleattrs);
     }
     
     /* Figure out the screen size. */
@@ -114,6 +125,10 @@ void gli_setup_curses()
     cbreak();
     noecho();
     nonl(); 
+#ifdef OPT_USE_COLORS
+    start_color();
+    use_default_colors();
+#endif
     intrflush(stdscr, FALSE); 
     keypad(stdscr, TRUE);
     scrollok(stdscr, FALSE);

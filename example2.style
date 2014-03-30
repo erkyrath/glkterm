@@ -1,0 +1,37 @@
+# This file configures the curses styles corresponding to GLK styles for
+# glkterm.
+# 
+# Theme loosely based on the wombat256 color theme for vim, uses 256 colors.
+#
+[separator] # separators between windows
+Normal        = 111, 234,
+
+[textbuffer] # main text area
+# Style         fg  bg  attrs
+Normal        = 252, 234,
+Emphasized    = 173, 234, UNDERLINE
+Preformatted  = 252, 234,
+Header        = 16, 152, BOLD
+Subheader     = 16, 248, BOLD
+Alert         = 252, 234, REVERSE
+Note          = 192, 234, UNDERLINE
+BlockQuote    = 246, 234,
+Input         = 252, 234, BOLD
+User1         = 229, 234,
+User2         = 113, 234,
+
+[textgrid] # information area
+# Style         fg  bg  attrs
+Normal        = 252, 234,
+Emphasized    = 173, 234, UNDERLINE
+Preformatted  = 252, 234,
+Header        = 16, 152, BOLD
+Subheader     = 16, 248, BOLD
+Alert         = 252, 234, REVERSE
+Note          = 192, 234, UNDERLINE
+BlockQuote    = 246, 234,
+Input         = 252, 234, BOLD
+User1         = 229, 234,
+User2         = 113, 234,
+
+
