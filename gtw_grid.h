@@ -35,7 +35,8 @@ typedef struct window_textgrid_struct {
     gidispatch_rock_t inarrayrock;
 } window_textgrid_t;
 
-extern chtype win_textgrid_styleattrs[style_NUMSTYLES];
+extern int win_textgrid_styleattrs[style_NUMSTYLES];
+extern int win_textgrid_styles[style_NUMSTYLES][3];
 
 extern window_textgrid_t *win_textgrid_create(window_t *win);
 extern void win_textgrid_destroy(window_textgrid_t *dwin);

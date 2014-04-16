@@ -91,7 +91,8 @@ typedef struct window_textbuffer_struct {
     gidispatch_rock_t inarrayrock;
 } window_textbuffer_t;
 
-extern chtype win_textbuffer_styleattrs[style_NUMSTYLES];
+extern int win_textbuffer_styleattrs[style_NUMSTYLES];
+extern int win_textbuffer_styles[style_NUMSTYLES][3];
 
 extern window_textbuffer_t *win_textbuffer_create(window_t *win);
 extern void win_textbuffer_destroy(window_textbuffer_t *dwin);

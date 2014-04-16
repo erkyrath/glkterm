@@ -226,5 +226,15 @@
     The second is for a keyboard that can only generate 7-bit ASCII.
 */
 
+#define OPT_USE_COLORS
+
+/* OPT_USE_COLORS can be defined to use ncurses color support.
+ * All modern ncurses libraries support colors, but if yours doesn't -
+ * you get an error on init_pair or start_colors - this can be undefined.
+ *
+ * Note that it doesn't matter whether your terminal supports colors. If your
+ * terminal doesn't support colors, they won't be used either way.
+ */
+
 #endif /* GTOPTION_H */
 

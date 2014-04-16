@@ -12,6 +12,17 @@
 #include "glkterm.h"
 #include "gtw_pair.h"
 
+/* Array of curses.h attribute values, one for each style. */
+int win_separator_styleattrs[style_NUMSTYLES];
+
+/* Curses foreground, background and attribute information, one for each style. 
+ * Only the normal style is used here.
+ */
+int win_separator_styles[style_NUMSTYLES][3]={
+    /*                   fg   bg  attrs */
+    /* Normal */       { -1,  -1, 0},
+};
+
 window_pair_t *win_pair_create(window_t *win, glui32 method, window_t *key, 
     glui32 size)
 {
@@ -183,6 +194,7 @@ void win_pair_redraw(window_t *win)
         return;
         
     dwin = win->data;
+    attrset(win_separator_styleattrs[0]);
 
     if (dwin->vertical) {
         if (dwin->splitwidth) {
@@ -211,6 +223,7 @@ void win_pair_redraw(window_t *win)
             }
         }
     }
+    attrset(0);
     
     gli_window_redraw(dwin->child1);
     gli_window_redraw(dwin->child2);

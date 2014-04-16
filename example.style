@@ -1,0 +1,63 @@
+# This file configures the curses styles corresponding to GLK styles for
+# glkterm.
+# Very basic example of a style file, using only 8 colors.
+#
+# There are two categories, the styles for textbuffer and textgrid windows.
+#
+# Each line consists of the name of the style, like 'Normal', the foreground
+# color, the background color, and a list of attributes seperated by spaces.
+# For non-color builds of glkterm both colors are ignored.
+#
+# The number of colors available depends on the terminal setting (TERM
+# environment variable). It can be queried using `tput colors` from the command
+# line. Some older terminals have only 8 colors available, whereas modern
+# terminals usually have 256. The special value -1 is used to specify the
+# terminal default.
+#
+# Available attributes are:
+#   STANDOUT    Best highlighting mode of the terminal (usually same as REVERSE).
+#   UNDERLINE   Underlining.
+#   REVERSE     Reverse-video (swap foreground and background).
+#   BLINK       Blinking.
+#   DIM         Half bright.
+#   BOLD        Bold or extra bright.
+#   ALTCHARSET  Alternate character set.
+#   INVIS       Invisibility.
+#   PROTECT     Protected mode.
+#
+# Note that not all terminals implement all attributes. Unknown attributes are ignored.
+# The background of Normal text is used as overall window background.
+#
+[separator] # separators between windows
+Normal        = -1, -1,
+
+[textbuffer] # main text area
+# Style         fg  bg  attrs
+Normal        = -1, -1,
+Emphasized    = -1, -1, UNDERLINE
+Preformatted  = -1, -1,
+Header        = 4, -1, BOLD
+Subheader     = 5, -1, BOLD
+Alert         = -1, -1, REVERSE
+Note          = -1, -1, UNDERLINE
+BlockQuote    = -1, -1,
+Input         = -1, -1, BOLD
+User1         = 2, -1,
+User2         = 3, -1,
+
+[textgrid] # information area
+# Style         fg  bg  attrs
+Normal        = -1, -1,
+Emphasized    = -1, -1, UNDERLINE
+Preformatted  = -1, -1,
+Header        = -1, -1, BOLD
+Subheader     = -1, -1, BOLD
+Alert         = -1, -1, REVERSE
+Note          = -1, -1, UNDERLINE
+BlockQuote    = -1, -1,
+Input         = -1, -1, BOLD
+User1         = -1, -1,
+User2         = -1, -1,
+
+#[blub]
+

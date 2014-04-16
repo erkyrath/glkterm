@@ -14,7 +14,23 @@
 #include "gtw_buf.h"
 
 /* Array of curses.h attribute values, one for each style. */
-chtype win_textbuffer_styleattrs[style_NUMSTYLES];
+int win_textbuffer_styleattrs[style_NUMSTYLES];
+
+/* Curses foreground, background and attribute information, one for each style. */
+int win_textbuffer_styles[style_NUMSTYLES][3]={
+    /*                   fg   bg  attrs */
+    /* Normal */       { -1,  -1, 0},
+    /* Emphasized */   { -1,  -1, A_UNDERLINE },
+    /* Preformatted */ { -1,  -1, 0},
+    /* Header */       { -1,  -1, A_BOLD },
+    /* Subheader */    { -1,  -1, A_BOLD },
+    /* Alert */        { -1,  -1, A_REVERSE },
+    /* Note */         { -1,  -1, A_UNDERLINE },
+    /* BlockQuote */   { -1,  -1, 0},
+    /* Input */        { -1,  -1, A_BOLD },
+    /* User1 */        { -1,  -1, 0},
+    /* User2 */        { -1,  -1, 0}
+};
 
 /* Maximum buffer size. The slack value is how much larger than the size 
     we should get before we trim. */
@@ -613,7 +629,7 @@ static void updatetext(window_textbuffer_t *dwin)
                             addch(*cx);
                     }
                 }
-                attrset(0);
+                attrset(win_textbuffer_styleattrs[0]);
                 gli_print_spaces(dwin->width - count);
             }
             else {
@@ -622,6 +638,7 @@ static void updatetext(window_textbuffer_t *dwin)
                 gli_print_spaces(dwin->width);
             }
         }
+        attrset(0);
     }
 }
 
