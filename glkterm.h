@@ -183,6 +183,8 @@ extern gidispatch_rock_t (*gli_register_arr)(void *array, glui32 len, char *type
 extern void (*gli_unregister_arr)(void *array, glui32 len, char *typecode, 
     gidispatch_rock_t objrock);
 
+extern int pref_fgcolor;
+extern int pref_bgcolor;
 extern int pref_printversion;
 extern int pref_screenwidth;
 extern int pref_screenheight;

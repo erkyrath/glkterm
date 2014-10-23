@@ -17,6 +17,10 @@
 /* Declarations of preferences flags. */
 int pref_printversion = FALSE;
 int pref_screenwidth = 0;
+
+int pref_fgcolor = 7;
+int pref_bgcolor = 0;
+
 int pref_screenheight = 0;
 int pref_messageline = TRUE;
 int pref_reverse_textgrids = FALSE;
@@ -171,6 +175,14 @@ int main(int argc, char *argv[])
             pref_window_borders = val;
             pref_override_window_borders = TRUE;
         }
+
+        else if (extract_value(argc, argv, "fg", ex_Int, &ix, &val, pref_fgcolor)) {
+            pref_fgcolor = val;
+        }
+        else if (extract_value(argc, argv, "bg", ex_Int, &ix, &val, pref_bgcolor)) {
+            pref_bgcolor = val;
+        }
+
         else if (extract_value(argc, argv, "defprompt", ex_Bool, &ix, &val, pref_prompt_defaults))
             pref_prompt_defaults = val;
 #ifdef OPT_TIMED_INPUT
@@ -211,6 +223,10 @@ int main(int argc, char *argv[])
         printf("  -revgrid BOOL: reverse text in grid (status) windows (default 'no')\n");
         printf("  -border BOOL: force borders/no borders between windows\n");
         printf("  -defprompt BOOL: provide defaults for file prompts (default 'yes')\n");
+
+        printf("  -fg NUM: change foreground color (see definitions in curses.h)\n");
+        printf("  -bg NUM: change background color (see definitions in curses.h)\n");
+
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");
 #endif /* !OPT_TIMED_INPUT */

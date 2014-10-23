@@ -23,6 +23,15 @@
 /* Linked list of all windows */
 static window_t *gli_windowlist = NULL; 
 
+#ifdef WIN32
+	#define SIGCONT 18	/* Continue - POSIX implementation */
+	#define SIGSTOP 19	/* Stop - POSIX implementation).  */
+	#define SIGTSTP 20	/* Keyboard stop - POSIX implementation.  */
+	#define SIGHUP 1	/* POSIX */
+	#define SIGKILL 9	/* POSIX SIGKILL */
+	#define SIGWINCH 28	/* POSIX SIGWINCH */
+#endif
+
 /* For use by gli_print_spaces() */
 #define NUMSPACES (16)
 static char spacebuffer[NUMSPACES+1];
@@ -111,6 +120,9 @@ void gli_initialize_windows()
 void gli_setup_curses()
 {
     initscr();
+    start_color();
+    init_pair(1, pref_fgcolor, pref_bgcolor);
+    bkgd(COLOR_PAIR(1) | ' ');
     cbreak();
     noecho();
     nonl(); 
