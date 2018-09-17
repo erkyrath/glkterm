@@ -112,7 +112,7 @@ static char *gli_suffix_for_usage(glui32 usage)
 
 frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
 {
-    char filename[] = "/tmp/glktermXXXXXX";
+    char filename[] = "/tmp/glktempfref-XXXXXX";
     fileref_t *fref;
     
     /* This is a pretty good way to do this on Unix systems. It doesn't
