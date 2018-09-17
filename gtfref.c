@@ -115,9 +115,10 @@ frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
     char filename[] = "/tmp/glktermXXXXXX";
     fileref_t *fref;
     
-    /* This is a pretty good way to do this on Unix systems. On Macs,
-        it's pretty bad, but this library won't be used on the Mac 
-        -- I hope. I have no idea about the DOS/Windows world. */
+    /* This is a pretty good way to do this on Unix systems. It doesn't
+       make sense on Windows, but anybody compiling this library on
+       Windows has already set up some kind of Unix-like environment,
+       I hope. */
         
     mkstemp(filename);
 
