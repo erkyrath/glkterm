@@ -18,8 +18,10 @@ glui32 glk_gestalt(glui32 id, glui32 val)
 
 glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
 {
+    static int impl;
     int ix;
     
+    impl=TRUE;
     switch (id) {
         
         case gestalt_Version:
@@ -49,7 +51,7 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
                     || val == keycode_Up || val == keycode_Down
                     || val == keycode_Return || val == keycode_Delete
                     || val == keycode_Escape)
-                    return TRUE;
+                    return (val == keycode_Return || pref_typable_specials);
                 else
                     return FALSE;
             }
@@ -118,10 +120,11 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
             return TRUE;
 
         case gestalt_LineTerminators:
-            return TRUE;
+            return pref_typable_specials;
         case gestalt_LineTerminatorKey:
             /* GlkTerm never uses the escape or function keys for anything,
                so we'll allow them to be line terminators. */
+            if (!pref_typable_specials) return FALSE;
             if (val == keycode_Escape)
                 return TRUE;
             if (val >= keycode_Func12 && val <= keycode_Func1)
@@ -134,7 +137,16 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
         case gestalt_ResourceStream:
             return TRUE;
 
+        case 0x1400: /* gestalt_Gestalt */
+            glk_gestalt_ext(val,0,NULL,0);
+            return impl;
+
+        case 0x1407: /* gestalt_CharInputExt */
+            if(val=='\031' || val=='\026') return char_typable_table[val]?0x22:0;
+            else return char_typable_table[val]?0x33:0;
+
         default:
+            impl=FALSE;
             return 0;
 
     }

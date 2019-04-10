@@ -26,8 +26,16 @@ void gli_msgline_warning(char *msg)
     if (!pref_messageline)
         return;
         
-    sprintf(buf, "Glk library error: %s", msg);
+    snprintf(buf, 256, "Glk library error: %s", msg);
     gli_msgline(buf);
+    
+    if(pref_pause_warning) {
+      move(content_box.bottom, 0);
+      refresh();
+      while(getch()==ERR && !just_killed);
+      gli_msgline("");
+    }
+    if(just_killed) gli_fast_exit();
 }
 
 void gli_msgline(char *msg)

@@ -16,6 +16,7 @@
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
+#include "gtw_buf.h"
 
 /* A pointer to the place where the pending glk_select() will store its
     event. When not inside a glk_select() call, this will be NULL. */
@@ -46,14 +47,17 @@ void gli_initialize_events()
 
 void glk_select(event_t *event)
 {
+    window_textbuffer_t *dwin;
+    int ismore = FALSE;
     int needrefresh = TRUE;
     
     curevent = event;
     gli_event_clearevent(curevent);
     
+    if(pref_clear_message) gli_msgline(gli_exited?"-- Exit --":"");
     gli_windows_update();
     gli_windows_set_paging(FALSE);
-    gli_input_guess_focus();
+    if(pref_auto_focus || !gli_focuswin) gli_input_guess_focus();
     
     while (curevent->type == evtype_None) {
         int key;
@@ -61,6 +65,19 @@ void glk_select(event_t *event)
         /* It would be nice to display a "hit any key to continue" message in
             all windows which require it. */
         if (needrefresh) {
+            if(pref_more_message && gli_focuswin && gli_focuswin->type==wintype_TextBuffer) {
+                dwin=gli_focuswin->data;
+                if(dwin->lastseenline < dwin->numlines - dwin->height) {
+                    gli_msgline("-- More --");
+                    ismore=TRUE;
+                } else if(ismore) {
+                    gli_msgline(gli_exited?"-- Exit --":"");
+                    ismore=FALSE;
+                }
+            } else if(pref_more_message && ismore) {
+                gli_msgline(gli_exited?"-- Exit --":"");
+                ismore=FALSE;
+            }
             gli_windows_place_cursor();
             refresh();
             needrefresh = FALSE;

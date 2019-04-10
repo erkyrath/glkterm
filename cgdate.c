@@ -106,7 +106,7 @@ void glk_current_time(glktimeval_t *time)
         return;
     }
 
-    gli_timestamp_to_time(tv.tv_sec, tv.tv_usec, time);
+    gli_timestamp_to_time(tv.tv_sec+pref_clock_skew, tv.tv_usec, time);
 }
 
 glsi32 glk_current_simple_time(glui32 factor)
@@ -123,7 +123,7 @@ glsi32 glk_current_simple_time(glui32 factor)
         return 0;
     }
 
-    return gli_simplify_time(tv.tv_sec, factor);
+    return gli_simplify_time(tv.tv_sec+pref_clock_skew, factor);
 }
 
 void glk_time_to_date_utc(glktimeval_t *time, glkdate_t *date)
