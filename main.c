@@ -16,6 +16,9 @@
 #include "gtw_buf.h"
 #include "gtw_grid.h"
 
+/* Make gcc shut up about "...pointer from integer without a cast" */
+char *strdup(const char *s);
+
 /* Declarations of preferences flags. */
 int pref_printversion = FALSE;
 int pref_screenwidth = 0;
