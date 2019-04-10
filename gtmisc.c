@@ -29,6 +29,8 @@ gidispatch_rock_t (*gli_register_arr)(void *array, glui32 len, char *typecode) =
 void (*gli_unregister_arr)(void *array, glui32 len, char *typecode, 
     gidispatch_rock_t objrock) = NULL;
 
+int gli_exited=FALSE;
+
 static char *char_A0_FF_to_ascii[6*16] = {
     " ", "!", "c", "Lb", NULL, "Y", "|", NULL,
     NULL, "(C)", NULL, "<<", NULL, "-", "(R)", NULL,
@@ -99,7 +101,7 @@ void gli_initialize_misc()
                 || ix == '\033')            /* parsed as keycode_Escape */
                 cantype = FALSE;
             else
-                cantype = TRUE;
+                cantype = pref_typable_controls;
             /* The newline is printable, but no other control characters. */
             if (ix == '\012')
                 canprint = TRUE;
@@ -142,7 +144,18 @@ void gli_initialize_misc()
 
 void glk_exit()
 {   
-    gli_msgin_getchar("Hit any key to exit.", TRUE);
+    if(pref_more_exit && gli_rootwin) {
+      event_t ev;
+      gli_exited=TRUE;
+      pref_auto_focus=TRUE;
+      pref_clear_message=TRUE;
+      for(;;) {
+        glk_select(&ev);
+        if(ev.type==evtype_CharInput) break;
+      }
+    } else {
+      gli_msgin_getchar("Hit any key to exit.", TRUE);
+    }
 
     gli_streams_close_all();
 

@@ -232,6 +232,12 @@ strid_t glk_stream_open_file(fileref_t *fref, glui32 fmode,
         gli_strict_warning("stream_open_file: invalid fileref ref.");
         return 0;
     }
+
+    /* User preference to force read-only */
+    if(fref->readonly && fmode!=filemode_Read) {
+        gli_strict_warning("stream_openfile: trying to open read-only file for writing.");
+        return 0;
+    }
     
     /* The spec says that Write, ReadWrite, and WriteAppend create the
        file if necessary. However, fopen(filename, "r+") doesn't create
@@ -347,7 +353,7 @@ strid_t glk_stream_open_file_uni(fileref_t *fref, glui32 fmode,
 {
     strid_t str = glk_stream_open_file(fref, fmode, rock);
     /* Unlovely, but it works in this library */
-    str->unicode = TRUE;
+    if(str) str->unicode = TRUE;
     return str;
 }
 
