@@ -187,13 +187,13 @@ void win_pair_redraw(window_t *win)
     if (dwin->vertical) {
         if (dwin->splitwidth) {
             for (ix=win->bbox.top; ix<win->bbox.bottom; ix++) {
-                mvaddch(ix, dwin->splitpos, '|');
+                mvaddch(ix, dwin->splitpos, ACS_VLINE);
             }
             if (win->bbox.top-1 >= 0) {
-                mvaddch(win->bbox.top-1, dwin->splitpos, '+');
+                mvaddch(win->bbox.top-1, dwin->splitpos, ACS_TTEE);
             }
             if (win->bbox.bottom < content_box.bottom) {
-                mvaddch(win->bbox.bottom, dwin->splitpos, '+');
+                mvaddch(win->bbox.bottom, dwin->splitpos, ACS_BTEE);
             }
         }
     }
@@ -201,13 +201,13 @@ void win_pair_redraw(window_t *win)
         if (dwin->splitwidth) {
             move(dwin->splitpos, win->bbox.left);
             for (ix=win->bbox.left; ix<win->bbox.right; ix++) {
-                addch('-');
+                addch(ACS_HLINE);
             }
             if (win->bbox.left-1 >= 0) {
-                mvaddch(dwin->splitpos, win->bbox.left-1, '+');
+                mvaddch(dwin->splitpos, win->bbox.left-1, ACS_LTEE);
             }
             if (win->bbox.right < content_box.right) {
-                mvaddch(dwin->splitpos, win->bbox.right, '+');
+                mvaddch(dwin->splitpos, win->bbox.right, ACS_RTEE);
             }
         }
     }
