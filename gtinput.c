@@ -333,7 +333,7 @@ static command_t *commands_window(window_t *win, int key)
         case wintype_TextGrid: {
             window_textgrid_t *dwin = win->data;
             cmd = commands_textgrid(key);
-            if (!cmd) {
+            if (!cmd && !gli_exited) {
                 if (win->line_request)
                     cmd = commands_textgrid_line(dwin, key);
                 else if (win->char_request)
@@ -348,7 +348,7 @@ static command_t *commands_window(window_t *win, int key)
                 if (dwin->lastseenline < dwin->numlines - dwin->height) {
                     cmd = commands_textbuffer_paging(key);
                 }
-                if (!cmd) {
+                if (!cmd && !gli_exited) {
                     if (win->line_request)
                         cmd = commands_textbuffer_line(dwin, key);
                     else if (win->char_request)
@@ -571,7 +571,7 @@ void gli_input_handle_key(int key)
     
     /* If not, see if there's some other window which has a binding for
         the key; if so, set the focus there. */
-    if (!cmd && gli_rootwin) {
+    if (!cmd && gli_rootwin && pref_auto_focus) {
         window_t *altwin = gli_focuswin;
         command_t *altcmd = NULL;
         do {
@@ -599,8 +599,10 @@ void gli_input_handle_key(int key)
             arg = cmd->arg;
         }
         (*cmd->func)(win, arg);
-    }
-    else {
+    } else if(gli_exited) {
+        /* Exit if a key is pushed */
+        gli_event_store(evtype_CharInput, 0, 0, 1);
+    } else {
         char buf[256];
         char *kbuf = key_to_name(key);
         sprintf(buf, "The key <%s> is not currently defined.", kbuf);

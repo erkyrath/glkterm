@@ -117,6 +117,7 @@ struct glk_fileref_struct {
     char *filename;
     int filetype;
     int textmode;
+    int readonly;
 
     gidispatch_rock_t disprock;
     fileref_t *next, *prev; /* in the big linked list of filerefs */
@@ -145,6 +146,7 @@ extern window_t *gli_rootwin;
 extern window_t *gli_focuswin;
 extern grect_t content_box;
 extern void (*gli_interrupt_handler)(void);
+extern int gli_exited;
 
 /* The following typedefs are copied from cheapglk.h. They support the
    tables declared in cgunigen.c. */
@@ -193,6 +195,35 @@ extern int pref_window_borders;
 extern int pref_precise_timing;
 extern int pref_historylen;
 extern int pref_prompt_defaults;
+/* Extended pref */
+extern int pref_style_override;
+extern int pref_border_graphics;
+extern unsigned long pref_border_style;
+extern int pref_use_colors;
+extern int pref_clear_message;
+extern int pref_auto_focus;
+extern int pref_more_message;
+extern int pref_typable_controls;
+extern int pref_typable_specials;
+#ifdef OPT_USE_MKSTEMP
+extern char*pref_temporary_filename;
+#endif
+extern int pref_readonly;
+extern int pref_auto_suffix;
+extern int pref_prompt_raw_filename;
+extern signed long pref_clock_skew;
+extern int pref_restrict_files;
+extern int pref_pause_warning;
+extern int pref_more_exit;
+
+/* Filename mapping */
+typedef struct {
+  char*glkname;
+  char*native;
+  char writable;
+} Filename_Mapping;
+extern Filename_Mapping*filename_mapping;
+extern int num_filename_mapping;
 
 /* Declarations of library internal functions. */
 

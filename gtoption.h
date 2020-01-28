@@ -17,7 +17,7 @@
 /* Options: */
 
 #define LIBRARY_VERSION "1.0.4"
-#define LIBRARY_PORT "Generic"
+#define LIBRARY_PORT "Enhanced"
 
 /* If you change this code substantially, you should change the
     LIBRARY_PORT definition to something which explains what the
@@ -79,6 +79,13 @@
     is also defined.
 */
 
+
+#define OPT_USE_MKSTEMP
+
+/* OPT_USE_MKSTEMP should be defined if mkstemp() is available. See the
+    user setting documentation for details about the template.
+*/
+
 /* #define NO_MEMMOVE */
 
 /* NO_MEMMOVE should be defined if your standard library doesn't
@@ -125,7 +132,6 @@
 }
 */
 
-/*
 #define OPT_AO_FF_OUTPUT {  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
@@ -140,8 +146,8 @@
     0, 0, 0, 0, 0, 0, 0, 0,  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
 }
-*/
 
+/*
 #define OPT_AO_FF_OUTPUT {  \
     '\312', '\301', '\242', '\243',  0    , '\264',  0    , '\244',  \
     '\254', '\251', '\273', '\307', '\302', '\320', '\250',  0    ,  \
@@ -156,6 +162,7 @@
      0    , '\226', '\230', '\227', '\231', '\233', '\232', '\326',  \
     '\277', '\235', '\234', '\236', '\237',  0    ,  0    , '\330',  \
 }
+*/
 
 /* OPT_AO_FF_OUTPUT should be defined as a translation table. This is
     ignored if OPT_NATIVE_LATIN_1 is defined. 
@@ -172,23 +179,24 @@
     is for the standard Macintosh character set.
 */
 
-#define OPT_AO_FF_TYPABLE {  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-    1, 1, 1, 1, 1, 1, 1, 1,  \
-}
-
 /*
 #define OPT_AO_FF_TYPABLE {  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+    1, 1, 1, 1, 1, 1, 1, 1,  \
+}
+*/
+
+#define OPT_AO_FF_TYPABLE {  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
@@ -202,7 +210,6 @@
     0, 0, 0, 0, 0, 0, 0, 0,  \
     0, 0, 0, 0, 0, 0, 0, 0,  \
 }
-*/
 
 /* OPT_AO_FF_TYPABLE should be defined as a table of which characters
     can actually be typed by the player.

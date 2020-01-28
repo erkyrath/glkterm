@@ -4,6 +4,10 @@
     http://www.eblong.com/zarf/glk/index.html
 */
 
+#ifdef OPT_USE_MKSTEMP
+#define _BSD_SOURCE
+#endif
+
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +47,7 @@ fileref_t *gli_new_fileref(char *filename, glui32 usage, glui32 rock)
     
     fref->textmode = ((usage & fileusage_TextMode) != 0);
     fref->filetype = (usage & fileusage_TypeMask);
+    fref->readonly = pref_readonly;
     
     fref->prev = NULL;
     fref->next = gli_filereflist;
@@ -97,6 +102,8 @@ void glk_fileref_destroy(fileref_t *fref)
 
 static char *gli_suffix_for_usage(glui32 usage)
 {
+    if(!pref_auto_suffix) return "";
+
     switch (usage & fileusage_TypeMask) {
         case fileusage_Data:
             return ".glkdata";
@@ -112,17 +119,38 @@ static char *gli_suffix_for_usage(glui32 usage)
 
 frefid_t glk_fileref_create_temp(glui32 usage, glui32 rock)
 {
-    char filename[] = "/tmp/glktempfref-XXXXXX";
+    char *filename;
     fileref_t *fref;
+    
+    if(pref_readonly) return NULL;
     
     /* This is a pretty good way to do this on Unix systems. It doesn't
        make sense on Windows, but anybody compiling this library on
        Windows has already set up some kind of Unix-like environment,
        I hope. */
         
-    mkstemp(filename);
-
+#ifdef OPT_USE_MKSTEMP
+    if(pref_temporary_filename) {
+      int i=mkstemp(pref_temporary_filename);
+      if(i==-1) {
+          gli_strict_warning("fileref_create_temp: mkstemp() failed.");
+          return NULL;
+      }
+      close(i);
+      filename = pref_temporary_filename;
+    } else
+#else
+    filename = tmpnam(NULL);
+#endif
+    
     fref = gli_new_fileref(filename, usage, rock);
+#ifdef OPT_USE_MKSTEMP
+    if(pref_temporary_filename) {
+        /* Reset template to end with "XXXXXX" */
+        int i=strlen(pref_temporary_filename)-6;
+        memcpy(pref_temporary_filename+i,"XXXXXX",6);
+    }
+#endif
     if (!fref) {
         gli_strict_warning("fileref_create_temp: unable to create fileref.");
         return NULL;
@@ -159,6 +187,26 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
     int len;
     char *cx;
     char *suffix;
+    int wr=0;
+    
+    /* Check for user filename mappings. */
+    if(num_filename_mapping) {
+      int i;
+      for(i=0;i<num_filename_mapping;i++) {
+        if(!strcmp(name,filename_mapping[i].glkname)) {
+          strncpy(buf2,filename_mapping[i].native,2*BUFLEN);
+          buf2[2*BUFLEN]=0;
+          wr=filename_mapping[i].writable;
+          goto filename_done;
+        }
+      }
+    }
+
+    if(pref_restrict_files) {
+      snprintf(buf2,BUFLEN+5,"Unmapped filename: %s",name);
+      gli_strict_warning(buf2);
+      return NULL;
+    }
     
     /* The new spec recommendations: delete all characters in the
        string "/\<>:|?*" (including quotes). Truncate at the first
@@ -192,11 +240,13 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
     suffix = gli_suffix_for_usage(usage);
     sprintf(buf2, "%s/%s%s", workingdir, buf, suffix);
 
+    filename_done:
     fref = gli_new_fileref(buf2, usage, rock);
     if (!fref) {
         gli_strict_warning("fileref_create_by_name: unable to create fileref.");
         return NULL;
     }
+    if(wr) fref->readonly = FALSE;
     
     return fref;
 }
@@ -271,10 +321,13 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         return NULL;
     }
 
-    if (cx[0] == '/')
+    if (cx[0] == '/' || pref_prompt_raw_filename)
         strcpy(newbuf, cx);
     else
         sprintf(newbuf, "%s/%s", workingdir, cx);
+    
+    /* Acknowledge raw filename preference. */
+    if(pref_prompt_raw_filename) goto raw_filename;
     
     /* If there is no dot-suffix, add a standard one. */
     val = strlen(newbuf);
@@ -291,6 +344,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         strcat(newbuf, suffix);
     }
     
+    raw_filename:
     if (fmode != filemode_Read) {
         if (!stat(newbuf, &sbuf) && S_ISREG(sbuf.st_mode)) {
             sprintf(prbuf, "Overwrite \"%s\"? [y/n] ", cx);
@@ -313,6 +367,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
         gli_strict_warning("fileref_create_by_prompt: unable to create fileref.");
         return NULL;
     }
+    if(fmode != filemode_Read) fref->readonly = FALSE;
     
     return fref;
 }
@@ -372,6 +427,11 @@ void glk_fileref_delete_file(fileref_t *fref)
 {
     if (!fref) {
         gli_strict_warning("fileref_delete_file: invalid ref");
+        return;
+    }
+
+    if (fref->readonly) {
+        gli_strict_warning("fileref_delete_file: can't delete read-only file");
         return;
     }
     

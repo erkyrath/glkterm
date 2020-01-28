@@ -7,10 +7,13 @@
 #include "gtoption.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
 #include "gtw_pair.h"
+
+char*border_buf;
 
 window_pair_t *win_pair_create(window_t *win, glui32 method, window_t *key, 
     glui32 size)
@@ -174,6 +177,52 @@ void win_pair_rearrange(window_t *win, grect_t *box)
     gli_window_rearrange(ch2, &box2);
 }
 
+#define BORDER_BUF(y,x) border_buf[(y)*content_box.right+(x)]
+
+static chtype border_char[32];
+
+void win_pair_calc_border(window_t*win) {
+  window_pair_t*dwin=win->data;
+  if(win==gli_rootwin) {
+    if(!pref_border_graphics || !border_buf) return;
+    if(win->type!=wintype_Pair) return;
+    memset(border_buf,0,content_box.right*content_box.bottom);
+    if(!*border_char) {
+      int ix;
+      for(ix=0;ix<32;ix++) border_char[ix]=ACS_PLUS;
+      border_char[1]=ACS_TTEE;
+      border_char[2]=ACS_BTEE;
+      border_char[4|16]=ACS_LTEE;
+      border_char[8|16]=ACS_RTEE;
+      border_char[0]=ACS_VLINE;
+      border_char[16]=ACS_HLINE;
+    }
+  }
+    if (dwin->vertical) {
+        if (dwin->splitwidth) {
+            if (win->bbox.top-1 >= 0) {
+                BORDER_BUF(win->bbox.top-1, dwin->splitpos) |= 1;
+            }
+            if (win->bbox.bottom < content_box.bottom) {
+                BORDER_BUF(win->bbox.bottom, dwin->splitpos) |= 2;
+            }
+        }
+    }
+    else {
+        if (dwin->splitwidth) {
+            move(dwin->splitpos, win->bbox.left);
+            if (win->bbox.left-1 >= 0) {
+                BORDER_BUF(dwin->splitpos, win->bbox.left-1) |= 4;
+            }
+            if (win->bbox.right < content_box.right) {
+                BORDER_BUF(dwin->splitpos, win->bbox.right) |= 8;
+            }
+        }
+    }
+  if(dwin->child1->type==wintype_Pair) win_pair_calc_border(dwin->child1);
+  if(dwin->child2->type==wintype_Pair) win_pair_calc_border(dwin->child2);
+}
+
 void win_pair_redraw(window_t *win)
 {
     int ix;
@@ -187,13 +236,13 @@ void win_pair_redraw(window_t *win)
     if (dwin->vertical) {
         if (dwin->splitwidth) {
             for (ix=win->bbox.top; ix<win->bbox.bottom; ix++) {
-                mvaddch(ix, dwin->splitpos, '|');
+                mvaddch(ix, dwin->splitpos, (pref_border_graphics?border_char[BORDER_BUF(ix,dwin->splitpos)]:'|')|pref_border_style);
             }
             if (win->bbox.top-1 >= 0) {
-                mvaddch(win->bbox.top-1, dwin->splitpos, '+');
+                mvaddch(win->bbox.top-1, dwin->splitpos, (pref_border_graphics?border_char[BORDER_BUF(win->bbox.top-1,dwin->splitpos)]:'+')|pref_border_style);
             }
             if (win->bbox.bottom < content_box.bottom) {
-                mvaddch(win->bbox.bottom, dwin->splitpos, '+');
+                mvaddch(win->bbox.bottom, dwin->splitpos, (pref_border_graphics?border_char[BORDER_BUF(win->bbox.bottom,dwin->splitpos)]:'+')|pref_border_style);
             }
         }
     }
@@ -201,13 +250,13 @@ void win_pair_redraw(window_t *win)
         if (dwin->splitwidth) {
             move(dwin->splitpos, win->bbox.left);
             for (ix=win->bbox.left; ix<win->bbox.right; ix++) {
-                addch('-');
+                addch((pref_border_graphics?border_char[BORDER_BUF(dwin->splitpos,ix)|16]:'-')|pref_border_style);
             }
             if (win->bbox.left-1 >= 0) {
-                mvaddch(dwin->splitpos, win->bbox.left-1, '+');
+                mvaddch(dwin->splitpos, win->bbox.left-1, (pref_border_graphics?border_char[BORDER_BUF(dwin->splitpos,win->bbox.left-1)|16]:'+')|pref_border_style);
             }
             if (win->bbox.right < content_box.right) {
-                mvaddch(dwin->splitpos, win->bbox.right, '+');
+                mvaddch(dwin->splitpos, win->bbox.right, (pref_border_graphics?border_char[BORDER_BUF(dwin->splitpos,win->bbox.right)|16]:'+')|pref_border_style);
             }
         }
     }
