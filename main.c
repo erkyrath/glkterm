@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
         printf("  -help: display this list\n");
         printf("NUM values can be any number. BOOL values can be 'yes' or 'no', or no value to toggle.\n");
         printf("COLOR values can take CSS color names like 'red' or 'navy', three-digit hexadecimal\n"
-               "numbers like '#7F0' (for yellow-green), or six-digit hexadecimal numbers like '#336699'\n"
+               "numbers like '#7F0' (for yellow-green), or six-digit hexadecimal numbers like '#663399'\n"
                "(for rebeccapurple).\n");
         return 1;
     }

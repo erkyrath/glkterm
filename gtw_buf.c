@@ -198,6 +198,9 @@ static long find_style_by_pos(window_textbuffer_t *dwin, long pos)
     /* Do a binary search, maintaining 
             runs[beg].pos <= pos < runs[end].pos
         (we pretend that runs[numruns].pos is infinity) */
+    if (pos == 0) {
+        return 0;
+    }
     
     beg = 0;
     end = dwin->numruns;
