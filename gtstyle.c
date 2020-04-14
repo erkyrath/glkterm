@@ -6,11 +6,14 @@
 
 #include "gtoption.h"
 #include <ctype.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
+#endif
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
@@ -20,7 +23,7 @@
     later. */
 #include <term.h>
 
-static struct rgb_names_struct {
+static struct rgb_name_struct {
     const char *name;
     glsi32 rgb;
 } rgb_names[] = {
@@ -29,22 +32,36 @@ static struct rgb_names_struct {
 
 #if defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170401)
 #define INIT_PAIR(pair, f, b) init_extended_pair((pair), (f), (b))
-#define ATTR_SET(attrs, pair) attr_set((attrs), 0, &(pair))
+#define ATTR_SET(attrs, pair) attr_set((attrs), (pair), &(pair))
+#define PAIR_MAX INT_MAX
 #else
 #define INIT_PAIR(pair, f, b) init_pair((pair), (f), (b))
 #define ATTR_SET(attrs, pair) attr_set((attrs), (pair), NULL)
+#define PAIR_MAX SHRT_MAX
 #endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170401) */
 
-/* If we don't have italics, use underline. (This is also an option when italics
-    are available.) */
+#if defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20200411)
+/* Earlier versions of ncurses had a broken find_pair and alloc_pair. */
+#define USE_NCURSES_ALLOC_PAIR
+#endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20200411) */
+
+/* If we don't have italics, use underline. (This is also a command-line option
+    when italics are available.) */
 #ifndef A_ITALIC
 #define A_ITALIC A_UNDERLINE
 #endif
+
+#define COUNTOF(ar) (sizeof(ar) / sizeof((ar)[0]))
+#define COMPILE_TIME_ASSERT2(b, line) \
+    typedef int compile_time_assert_failed_at_line_##line[(b) ? 1 : -1]
+#define COMPILE_TIME_ASSERT1(b, line) COMPILE_TIME_ASSERT2(b, line)
+#define COMPILE_TIME_ASSERT(b) COMPILE_TIME_ASSERT1(b, __LINE__)
 
 /* Get the red, green, and blue parts of a color. */
 #define R_PART(color) (((glsi32)color >> 16) & 0xFF)
 #define G_PART(color) (((glsi32)color >> 8) & 0xFF)
 #define B_PART(color) ((glsi32)color & 0xFF)
+#define SCALE_255_1000(byte) (((int)(byte) * 1000 + 127) / 255)
 
 /* We can't really know the actual colors the user sees. These are taken from
     XTerm. */
@@ -53,6 +70,13 @@ static const glsi32 xterm_16colors[] = {
     0x00CDCD, 0xE5E5E5, 0x7F7F7F, 0xFF0000, 0x00FF00, 0xFFFF00,
     0x5C5CFF, 0xFF00FF, 0x00FFFF, 0xFFFFFF
 };
+COMPILE_TIME_ASSERT(COUNTOF(xterm_16colors) == 16);
+
+/* The steps in the xterm-256color 6x6 color cube. */
+static const uint8_t xterm_256color_steps[] = {
+    0x00, 0x5F, 0x87, 0xAF, 0xD7, 0xFF
+};
+COMPILE_TIME_ASSERT(COUNTOF(xterm_256color_steps) == 6);
 
 typedef struct stylehint_struct {
     glsi32 weight;
@@ -66,6 +90,7 @@ typedef struct stylehint_struct {
 static stylehint_t textbuffer_stylehints[style_NUMSTYLES];
 static stylehint_t textgrid_stylehints[style_NUMSTYLES];
 
+#ifndef USE_NCURSES_ALLOC_PAIR
 /* A list with all the pairs. In lieu of a proper map, we look for the correct
     color indexes to get the pair number. */
 static struct pair_struct {
@@ -74,11 +99,15 @@ static struct pair_struct {
     int bgi; /* Index for foreground (depends on terminal) */
     struct pair_struct *next;
 } *pairs_head = NULL;
+#endif /* USE_NCURSES_ALLOC_PAIR */
 
-static int curses_alloc_pair(int fgi, int bgi)
+static int alloc_curses_pair(int fgi, int bgi)
 {
+#ifdef USE_NCURSES_ALLOC_PAIR
+    int ret = alloc_pair(fgi, bgi);
+    return (ret >= 0) ? ret : 0;
+#else
     struct pair_struct *node = NULL, *prev_node = NULL;
-    const int max_count = COLOR_PAIRS;
     int pair = 1, count = 0;
     if (fgi == -1 && bgi == -1) {
         return 0;
@@ -97,7 +126,8 @@ static int curses_alloc_pair(int fgi, int bgi)
         if (node->pair >= pair) {
             pair = node->pair + 1;
         }
-        if (count >= max_count) {
+        /* When we're out of pairs, replace the least-recently used one. */
+        if (count >= PAIR_MAX) {
             pair = node->pair;
             prev_node->next = node->next;
             free(node);
@@ -114,6 +144,7 @@ static int curses_alloc_pair(int fgi, int bgi)
     node->next = pairs_head;
     pairs_head = node;
     return pair;
+#endif /* USE_NCURSES_ALLOC_PAIR */
 }
 
 static int color_distance_squared(int r1, int g1, int b1,
@@ -126,7 +157,6 @@ static int color_distance_squared(int r1, int g1, int b1,
 
 static void rgblevel_to_6x6(int level, int *index, uint8_t *out)
 {
-    static const uint8_t outs[] = { 0x00, 0x5F, 0x87, 0xAF, 0xD7, 0xFF };
     if (level < 48) {
         *index = 0;
     } else if (level < 115) {
@@ -134,7 +164,7 @@ static void rgblevel_to_6x6(int level, int *index, uint8_t *out)
     } else {
         *index = (level - 35) / 40;
     }
-    *out = outs[*index];
+    *out = xterm_256color_steps[*index];
 }
 
 static int get_nearest_curses_color(glsi32 color)
@@ -152,7 +182,7 @@ static int get_nearest_curses_color(glsi32 color)
         return -1; /* Tell curses to use the default. */
     }
 
-    for (i = 0; i < (int)(sizeof(cache)/sizeof(cache[0])); ++i) {
+    for (i = 0; i < (int)(COUNTOF(cache)); ++i) {
         if (cache[i].color == color) {
             return cache[i].curses_color;
         }
@@ -195,7 +225,7 @@ static int get_nearest_curses_color(glsi32 color)
         }
     } else if (COLORS >= 8) {
         int best_i = -1, distance_squared = 0, best_distance_squared = 0;
-        int n = sizeof(xterm_16colors)/sizeof(xterm_16colors[0]);
+        int n = COUNTOF(xterm_16colors);
         if (n > COLORS) {
             n = COLORS;
         }
@@ -219,7 +249,7 @@ static int get_nearest_curses_color(glsi32 color)
 
     cache_write->color = color;
     cache_write->curses_color = ret;
-    if (++cache_write >= cache + sizeof(cache)/sizeof(cache[0])) {
+    if (++cache_write >= cache + COUNTOF(cache)) {
         cache_write = cache;
     } 
     return ret;
@@ -232,21 +262,45 @@ void gli_initialize_styles(void)
     if (pref_color && start_color() != ERR) {
         use_default_colors();
         if (can_change_color()) {
-            /* Reset the terminal's colors. We want them to be reasonable. */
+            /* Reset the terminal's colors. We'll also set the colors to known
+                defaults. */
             putp(orig_colors);
             fflush(stdout);
             /* Set the first 8 or 16 colors to match what we expect. */
             if (COLORS >= 8) {
-                int i, n = sizeof(xterm_16colors)/sizeof(xterm_16colors[0]);
+                int i, n = COUNTOF(xterm_16colors);
                 if (n > COLORS) {
                     n = COLORS;
                 }
+                if (COLORS == 0x1000000) {
+                    /* Only reset the first 8 colors for direct color. */
+                    n = 8;
+                }
                 for (i = 0; i < n; ++i) {
-                    init_color(
-                        i,
-                        (R_PART(xterm_16colors[i]) * 1000 + 127) / 255,
-                        (G_PART(xterm_16colors[i]) * 1000 + 127) / 255,
-                        (B_PART(xterm_16colors[i]) * 1000 + 127) / 255);
+                    init_color(i,
+                               SCALE_255_1000(R_PART(xterm_16colors[i])),
+                               SCALE_255_1000(G_PART(xterm_16colors[i])),
+                               SCALE_255_1000(B_PART(xterm_16colors[i])));
+                }
+                if (COLORS == 256) {
+                    int ri, gi, bi, n = COUNTOF(xterm_256color_steps);
+                    /* Reset the 6x6 color cube to what we expect. */
+                    for ((void)(ri = 0), i = 16; ri < n; ++ri) {
+                        for (gi = 0; gi < n; ++gi) {
+                            for (bi = 0; bi < n; ++bi) {
+                                init_color(
+                                    i++,
+                                    SCALE_255_1000(xterm_256color_steps[ri]),
+                                    SCALE_255_1000(xterm_256color_steps[gi]),
+                                    SCALE_255_1000(xterm_256color_steps[bi]));
+                            }
+                        }
+                    }
+                    /* Reset the grayscale ramp to what we expect. */
+                    for (i = 232; i < 256; ++i) {
+                        gi = SCALE_255_1000(8 + 10 * (i - 232));
+                        init_color(i, gi, gi, gi);
+                    }
                 }
             }
         }
@@ -338,7 +392,7 @@ int gli_compare_styles(const styleplus_t *styleplus1,
 
 static int compare_rgb_names(const void *lhs, const void *rhs)
 {
-    return strcmp((const char *)lhs, ((struct rgb_names_struct *)rhs)->name);
+    return strcmp((const char *)lhs, ((struct rgb_name_struct *)rhs)->name);
 }
 
 /* Sets color to [0, 0xFFFFFF] (color) or -1 if successful.
@@ -349,7 +403,7 @@ int gli_get_color_for_name(const char *name, glsi32 *color)
     unsigned int r, g, b;
     size_t i;
     char *name_lower;
-    struct rgb_names_struct *rgb_name;
+    struct rgb_name_struct *rgb_name;
 
     if (len == 7 && sscanf(name, "#%2X%2X%2X", &r, &g, &b) == 3) {
         *color = (r << 16) | (g << 8) | b;
@@ -363,8 +417,7 @@ int gli_get_color_for_name(const char *name, glsi32 *color)
     for (i = 0; name_lower[i]; ++i) {
         name_lower[i] = tolower(name_lower[i]);
     }
-    rgb_name = bsearch(name_lower, rgb_names,
-                       sizeof(rgb_names)/sizeof(rgb_names[0]),
+    rgb_name = bsearch(name_lower, rgb_names, COUNTOF(rgb_names),
                        sizeof(rgb_names[0]), compare_rgb_names);
     free(name_lower);
     if (!rgb_name) {
@@ -422,7 +475,7 @@ int gli_set_window_style(window_t *win, const styleplus_t *styleplus)
         }
     }
 
-    pair = curses_alloc_pair(fgi, bgi);
+    pair = alloc_curses_pair(fgi, bgi);
     return (ATTR_SET(attr, pair) == OK);
 }
 
@@ -469,11 +522,13 @@ void gli_destroy_window_styles(window_t *win)
 
 void gli_shutdown_styles(void)
 {
+#ifndef USE_NCURSES_ALLOC_PAIR
     struct pair_struct *pair_node = pairs_head, *tmp = NULL;
     for (; pair_node; pair_node = tmp) {
         tmp = pair_node->next;
         free(pair_node);
     }
+#endif /* USE_NCURSES_ALLOC_PAIR */
 
     if (can_change_color()) {
         putp(orig_colors);
