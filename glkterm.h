@@ -42,6 +42,17 @@ typedef struct glk_fileref_struct fileref_t;
 #define MAGIC_STREAM_NUM (8269)
 #define MAGIC_FILEREF_NUM (6982)
 
+/* Holds the current style plus any overrides. Members should be considered
+    internal to gtstyle.c and not be accessed directly by other code. */
+typedef struct styleplus_struct {
+    glui32 style;
+    glsi32 inline_fgcolor;
+    glsi32 inline_bgcolor;
+    glsi32 inline_reverse;
+    int inline_fgi;
+    int inline_bgi;
+} styleplus_t;
+
 struct glk_window_struct {
     glui32 magicnum;
     glui32 rock;
@@ -62,8 +73,9 @@ struct glk_window_struct {
     int echo_line_input; /* applies to future line inputs, not the current */
     glui32 terminate_line_input; /* ditto; this is a bitmask of flags */
 
-    glui32 style;
-    
+    styleplus_t styleplus; /* current style plus inline settings */
+    struct stylehint_struct *stylehints; /* current window hints */
+
     gidispatch_rock_t disprock;
     window_t *next, *prev; /* in the big linked list of windows */
 };
@@ -193,6 +205,11 @@ extern int pref_window_borders;
 extern int pref_precise_timing;
 extern int pref_historylen;
 extern int pref_prompt_defaults;
+extern int pref_color;
+extern int pref_fgcolor;
+extern int pref_bgcolor;
+extern int pref_stylehint;
+extern int pref_emph_underline;
 
 /* Declarations of library internal functions. */
 
@@ -234,6 +251,18 @@ extern void gli_print_spaces(int len);
 
 extern void gcmd_win_change_focus(window_t *win, glui32 arg);
 extern void gcmd_win_refresh(window_t *win, glui32 arg);
+extern void gcmd_win_resize(window_t *win, glui32 arg);
+
+extern void gli_initialize_styles(void);
+extern void gli_initialize_window_styles(window_t *win);
+extern int gli_compare_styles(const styleplus_t *styleplus1, const styleplus_t *styleplus2);
+extern int gli_get_color_for_name(const char *name, glsi32 *color);
+extern void gli_reset_styleplus(styleplus_t *styleplus, glui32 style);
+extern int gli_set_window_style(window_t *win, const styleplus_t *styleplus);
+extern void gli_set_inline_colors(stream_t *str, glui32 fg, glui32 bg);
+extern void gli_set_inline_reverse(stream_t *str, glui32 reverse);
+extern void gli_destroy_window_styles(window_t *win);
+extern void gli_shutdown_styles(void);
 
 extern stream_t *gli_new_stream(int type, int readable, int writable, 
     glui32 rock);

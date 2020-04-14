@@ -134,6 +134,13 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
         case gestalt_ResourceStream:
             return TRUE;
 
+        case gestalt_GarglkText:
+#ifdef GLK_MODULE_GARGLKTEXT
+            return TRUE;
+#else
+            return FALSE;
+#endif /* GLK_MODULE_GARGLKTEXT */
+
         default:
             return 0;
 

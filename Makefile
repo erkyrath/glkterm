@@ -12,14 +12,34 @@
 #CC = cc
 CC = gcc -ansi
 
-# You may need to set directories to pick up the ncurses library.
-#INCLUDEDIRS = -I/usr/5include
-#LIBDIRS = -L/usr/5lib 
-LIBS = -lncurses
-
 OPTIONS = -O
 
-CFLAGS = $(OPTIONS) $(INCLUDEDIRS)
+PKG_CONFIG = $(shell which pkg-config)
+NO_PKG_CONFIG_NCURSES = 0
+ifeq (, $(PKG_CONFIG))
+  NO_PKG_CONFIG_NCURSES = 1
+  $(warning *** pkg-config not found.)
+else
+  ifneq (0, $(shell $(PKG_CONFIG) --exists ncurses ; echo $$?))
+    $(warning *** No ncurses package found.)
+    NO_PKG_CONFIG_NCURSES = 1
+  endif
+endif
+
+ifneq (0, $(NO_PKG_CONFIG_NCURSES))
+  # You may need to set directories to pick up libraries.
+  #NCURSES_CFLAGS = -I/usr/5include
+  #NCURSES_LIBDIRS = -L/usr/5lib
+  NCURSES_LIBS = -lncurses
+else
+  NCURSES_CFLAGS = $(shell $(PKG_CONFIG) --cflags ncurses)
+  NCURSES_LIBDIRS = $(shell $(PKG_CONFIG) --libs-only-L ncurses)
+  NCURSES_LIBS = $(shell $(PKG_CONFIG) --libs-only-l --libs-only-other ncurses)
+endif
+
+CFLAGS = $(OPTIONS) $(NCURSES_CFLAGS)
+LIBDIRS = $(NCURSES_LIBDIRS)
+LIBS = $(NCURSES_LIBS)
 
 GLKLIB = libglkterm.a
 

@@ -50,6 +50,7 @@ static void compute_content_box(void);
 #ifdef OPT_WINCHANGED_SIGNAL
         int screen_size_changed;
         static void gli_sig_winsize(int val);
+        static sig_t ncurses_sigwinch_handler = NULL;
 #endif /* OPT_WINCHANGED_SIGNAL */
 
 #endif /* OPT_USE_SIGNALS */
@@ -67,22 +68,6 @@ void gli_initialize_windows()
         spacebuffer[ix] = ' ';
     spacebuffer[NUMSPACES] = '\0';
     
-    /* Create the curses.h attribute values for each style. */
-    for (ix=0; ix<style_NUMSTYLES; ix++) {
-        chtype val = 0;
-        if (ix == style_Emphasized || ix == style_Note)
-            val |= A_UNDERLINE;
-        if (ix == style_Alert)
-            val |= A_REVERSE;
-        if (ix == style_Header || ix == style_Subheader || ix == style_Input)
-            val |= A_BOLD;
-        
-        win_textbuffer_styleattrs[ix] = val;
-        if (pref_reverse_textgrids)
-            val ^= A_REVERSE;
-        win_textgrid_styleattrs[ix] = val;
-    }
-    
     /* Figure out the screen size. */
     compute_content_box();
     
@@ -96,7 +81,7 @@ void gli_initialize_windows()
 
 #ifdef OPT_WINCHANGED_SIGNAL
             screen_size_changed = FALSE;
-            signal(SIGWINCH, &gli_sig_winsize);
+            ncurses_sigwinch_handler = signal(SIGWINCH, &gli_sig_winsize);
 #endif /* OPT_WINCHANGED_SIGNAL */
 
 #endif /* OPT_USE_SIGNALS */
@@ -139,13 +124,23 @@ static void gli_sig_interrupt(int val)
 /* Signal handler for SIGWINCH. */
 static void gli_sig_winsize(int val)
 {
+#ifdef KEY_RESIZE
+    /* Ncurses can install a SIGWINCH handler that handles updates and repaints
+        itself so we don't have to tear down and set up ncurses again (which
+        clears the screen to reinitialize) and then pushes a KEY_RESIZE.
+        However, ncurses can be built without the SIGWINCH handler, so we still
+        need a fallback plan. */
+    if (ncurses_sigwinch_handler && ncurses_sigwinch_handler != SIG_ERR) {
+        ncurses_sigwinch_handler(val);
+        signal(SIGWINCH, &gli_sig_winsize);
+        return;
+    }
+#endif
     endwin();
 
     newterm(getenv("TERM"), stdout, stdin);
     gli_setup_curses();
-    gli_set_halfdelay();
-
-    screen_size_changed = TRUE;
+    gcmd_win_resize(NULL, 0);
     signal(SIGWINCH, &gli_sig_winsize);
 }
 
@@ -212,7 +207,7 @@ window_t *gli_new_window(glui32 type, glui32 rock)
     win->char_request_uni = FALSE;
     win->echo_line_input = TRUE;
     win->terminate_line_input = 0;
-    win->style = style_Normal;
+    gli_initialize_window_styles(win);
 
     win->str = gli_stream_open_window(win);
     win->echostr = NULL;
@@ -244,6 +239,7 @@ void gli_delete_window(window_t *win)
         gli_delete_stream(win->str);
         win->str = NULL;
     }
+    gli_destroy_window_styles(win);
     
     prev = win->prev;
     next = win->next;
@@ -1311,6 +1307,12 @@ void gcmd_win_refresh(window_t *win, glui32 arg)
     gli_windows_redraw();
     gli_msgline_redraw();
     wrefresh(curscr);
+}
+
+void gcmd_win_resize(window_t *win, glui32 arg)
+{
+    gli_set_halfdelay();
+    screen_size_changed = TRUE;
 }
 
 #ifdef GLK_MODULE_IMAGE

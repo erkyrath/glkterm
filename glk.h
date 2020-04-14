@@ -31,6 +31,7 @@ typedef int32_t glsi32;
 #define GLK_MODULE_HYPERLINKS
 #define GLK_MODULE_DATETIME
 #define GLK_MODULE_RESOURCE_STREAM
+#define GLK_MODULE_GARGLKTEXT
 
 /* Define a macro for a function attribute that indicates a function that
     never returns. (E.g., glk_exit().) We try to do this only in C compilers
@@ -77,6 +78,7 @@ typedef struct glk_schannel_struct *schanid_t;
 #define gestalt_Sound2 (21)
 #define gestalt_ResourceStream (22)
 #define gestalt_GraphicsCharInput (23)
+#define gestalt_GarglkText (0x1100)
 
 #define evtype_None (0)
 #define evtype_Timer (1)
@@ -445,5 +447,17 @@ extern strid_t glk_stream_open_resource(glui32 filenum, glui32 rock);
 extern strid_t glk_stream_open_resource_uni(glui32 filenum, glui32 rock);
 
 #endif /* GLK_MODULE_RESOURCE_STREAM */
+
+#ifdef GLK_MODULE_GARGLKTEXT
+#define zcolor_Transparent (-4)
+#define zcolor_Cursor (-3)
+#define zcolor_Current (-2)
+#define zcolor_Default (-1)
+
+extern void garglk_set_zcolors(glui32 fg, glui32 bg);
+extern void garglk_set_zcolors_stream(strid_t str, glui32 fg, glui32 bg);
+extern void garglk_set_reversevideo(glui32 reverse);
+extern void garglk_set_reversevideo_stream(strid_t str, glui32 reverse);
+#endif /* GLK_MODULE_GARGLKTEXT */
 
 #endif /* GLK_H */

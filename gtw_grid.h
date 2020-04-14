@@ -8,7 +8,7 @@
 typedef struct tgline_struct {
     int size; /* this is the allocated size; only width is valid */
     char *chars;
-    unsigned char *attrs;
+    styleplus_t *styleplusses;
     int dirtybeg, dirtyend; /* characters [dirtybeg, dirtyend) need to be redrawn */
 } tgline_t;
 
@@ -31,11 +31,9 @@ typedef struct window_textgrid_struct {
     glui32 intermkeys;
     int inoriglen, inmax;
     int incurs, inlen;
-    glui32 origstyle;
+    styleplus_t origstyleplus;
     gidispatch_rock_t inarrayrock;
 } window_textgrid_t;
-
-extern chtype win_textgrid_styleattrs[style_NUMSTYLES];
 
 extern window_textgrid_t *win_textgrid_create(window_t *win);
 extern void win_textgrid_destroy(window_textgrid_t *dwin);
