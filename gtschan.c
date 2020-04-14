@@ -256,30 +256,22 @@ static void warningf(const char *format, ...)
 
 void gli_initialize_sound(void)
 {
-    const int bits_to_set = MIX_INIT_MOD | MIX_INIT_OGG;
-    int bits_set = 0;
-
     if (mutex) {
         warningf("sound: already initialized");
         return;
     }
     mutex = SDL_CreateMutex();
     if (!mutex) {
-        warningf("sound: init error: %s", SDL_GetError());
+        warningf("sound: error in SDL_CreateMutex: %s", SDL_GetError());
         return;
     }
     if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        warningf("sound: init error: %s", SDL_GetError());
         return;
     }
-    bits_set = Mix_Init(bits_to_set);
-    if ((bits_set & bits_to_set) != bits_to_set) {
-        warningf("sound: not all formats supported");
-        /* We may still have enough sound support, so keep going. */
-    }
+    /* Ignore the return because we may still have enough sound support. */
+    Mix_Init(MIX_INIT_MOD | MIX_INIT_OGG);
     if (Mix_OpenAudio(GLK_SOUND_FREQUENCY, MIX_DEFAULT_FORMAT,
                       GLK_SOUND_CHANNELS, GLK_SOUND_CHUNK_SIZE) < 0) {
-        warningf("sound: unable to open audio");
         return;
     }
     Mix_ChannelFinished(gli_finished_callback);
