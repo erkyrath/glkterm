@@ -16,10 +16,15 @@
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
+#include "queue.h"
 
-/* A pointer to the place where the pending glk_select() will store its
-    event. When not inside a glk_select() call, this will be NULL. */
-static event_t *curevent = NULL; 
+/* A queue with pending events. */
+typedef struct event_node_struct {
+    event_t event;
+    TAILQ_ENTRY(event_node_struct) entries;
+} event_node_t;
+static TAILQ_HEAD(unused, event_node_struct) events =
+    TAILQ_HEAD_INITIALIZER(events);
 
 static int halfdelay_running; /* TRUE if halfdelay() has been called. */
 static glui32 timing_msec; /* The current timed-event request, exactly as
@@ -44,18 +49,29 @@ void gli_initialize_events()
     gli_set_halfdelay();
 }
 
+/* Shut down the event system. This is called from glk_exit(). */
+void gli_shutdown_events(void)
+{
+    event_node_t *event_node = TAILQ_FIRST(&events), *tmp = NULL;
+    while (event_node) {
+        tmp = TAILQ_NEXT(event_node, entries);
+        free(event_node);
+        event_node = tmp;
+    }
+}
+
 void glk_select(event_t *event)
 {
+    event_node_t *event_node = NULL;
     int needrefresh = TRUE;
     
-    curevent = event;
-    gli_event_clearevent(curevent);
+    gli_event_clearevent(event);
     
     gli_windows_update();
     gli_windows_set_paging(FALSE);
     gli_input_guess_focus();
     
-    while (curevent->type == evtype_None) {
+    while (TAILQ_EMPTY(&events)) {
         int key;
     
         /* It would be nice to display a "hit any key to continue" message in
@@ -109,6 +125,11 @@ void glk_select(event_t *event)
 
 #endif /* OPT_USE_SIGNALS */
 
+#ifdef GLK_MODULE_SOUND
+        /* Store any sound events we may have. */
+        gli_store_sound_events();
+#endif
+
 #ifdef OPT_TIMED_INPUT
         /* Check to see if we've passed next_time. */
         if (timing_msec) {
@@ -129,15 +150,18 @@ void glk_select(event_t *event)
     
     /* An event has occurred; glk_select() is over. */
     gli_windows_trim_buffers();
-    curevent = NULL;
+
+    event_node = TAILQ_FIRST(&events);
+    *event = event_node->event;
+    TAILQ_REMOVE(&events, event_node, entries);
+    free(event_node);
 }
 
 void glk_select_poll(event_t *event)
 {
-    int firsttime = TRUE;
-    
-    curevent = event;
-    gli_event_clearevent(curevent);
+    event_node_t *event_node = NULL;
+
+    gli_event_clearevent(event);
     
     gli_windows_update();
     
@@ -146,9 +170,7 @@ void glk_select_poll(event_t *event)
        Yes, this looks like a loop, but that's just so we can use
         continue; it executes exactly once. */
         
-    while (firsttime) {
-        firsttime = FALSE;
-
+    do {
         gli_windows_place_cursor();
         refresh();
         
@@ -171,6 +193,11 @@ void glk_select_poll(event_t *event)
 
 #endif /* OPT_USE_SIGNALS */
 
+#ifdef GLK_MODULE_SOUND
+        /* Store any sound events we may have. */
+        gli_store_sound_events();
+#endif
+
 #ifdef OPT_TIMED_INPUT
         /* Check to see if we've passed next_time. */
         if (timing_msec) {
@@ -186,9 +213,24 @@ void glk_select_poll(event_t *event)
             }
         }
 #endif /* OPT_TIMED_INPUT */
-    }
+    } while (0);
 
-    curevent = NULL;
+    TAILQ_FOREACH(event_node, &events, entries) {
+        switch (event_node->event.type) {
+        case evtype_Arrange:
+        case evtype_Redraw:
+        case evtype_SoundNotify:
+        case evtype_VolumeNotify:
+        case evtype_Timer: {
+            *event = event_node->event;
+            TAILQ_REMOVE(&events, event_node, entries);
+            free(event_node);
+            return;
+        }
+        default:
+            break;
+        }
+    }
 }
 
 /* Various modules can call this to indicate that an event has occurred.
@@ -196,12 +238,12 @@ void glk_select_poll(event_t *event)
     idle event can only cause one event at most, this is fine. */
 void gli_event_store(glui32 type, window_t *win, glui32 val1, glui32 val2)
 {
-    if (curevent) {
-        curevent->type = type;
-        curevent->win = win;
-        curevent->val1 = val1;
-        curevent->val2 = val2;
-    }
+    event_node_t *event_node = malloc(sizeof(event_node_t));
+    event_node->event.type = type;
+    event_node->event.win = win;
+    event_node->event.val1 = val1;
+    event_node->event.val2 = val2;
+    TAILQ_INSERT_TAIL(&events, event_node, entries);
 }
 
 void glk_request_timer_events(glui32 millisecs)
