@@ -11,6 +11,7 @@
 
 #ifdef GLK_MODULE_SOUND
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <SDL.h>
@@ -105,8 +106,11 @@ static int load_resource(glui32 snd, Mix_Chunk **pmix_chunk)
             warningf("sound: unable to load resource %d", snd);
             return FALSE;
         }
-        *pmix_chunk = Mix_LoadWAV_RW(SDL_RWFromMem(res.data.ptr, res.length),
-                                     TRUE);
+        if (res.length > INT_MAX) {
+            return FALSE;
+        }
+        *pmix_chunk = Mix_LoadWAV_RW(
+            SDL_RWFromMem(res.data.ptr, (int)res.length), TRUE);
         return TRUE;
     }
 
@@ -229,11 +233,51 @@ static int play_resource(schannel_t *chan, Mix_Chunk *mix_chunk,
     return success;
 }
 
+static void set_volume(schanid_t chan, glui32 vol, glui32 duration,
+                       glui32 notify)
+{
+    if (!chan) {
+        warningf("sound: invalid channel");
+        return;
+    }
+
+    SDL_LockMutex(mutex);
+    if (duration == 0) {
+        chan->volume_current = vol;
+        if (chan->mix_chunk) {
+            Mix_Volume(chan->mix_channel,
+                       glkvolume_to_mixvolume(chan->volume_current));
+        }
+    } else {
+        if (notify) {
+            chan->volume_event_data = malloc(sizeof(schannel_event_t));
+            if (!chan->volume_event_data) {
+                return;
+            }
+            chan->volume_event_data->event.type = evtype_VolumeNotify;
+            chan->volume_event_data->event.win = NULL;
+            chan->volume_event_data->event.val1 = 0;
+            chan->volume_event_data->event.val2 = notify;
+            chan->volume_event_data->chan = chan;
+        }
+        chan->volume_begin = chan->volume_current;
+        chan->volume_end = vol;
+        chan->volume_ticks_begin = SDL_GetTicks();
+        chan->volume_ticks_duration = duration;
+        if (chan->volume_sdl_timerid) {
+            SDL_RemoveTimer(chan->volume_sdl_timerid);
+        }
+        chan->volume_sdl_timerid = SDL_AddTimer(100, &gli_volume_callback,
+                                                chan);
+    }
+    SDL_UnlockMutex(mutex);
+}
+
 static void warningf(const char *format, ...)
 {
     va_list args;
     int n = 0;
-    int siz = 256;
+    size_t siz = 256;
     char *buf = NULL;
     for (;;) {
         buf = malloc(siz);
@@ -244,12 +288,12 @@ static void warningf(const char *format, ...)
         va_start(args, format);
         n = vsnprintf(buf, siz, format, args);
         va_end(args);
-        if (n < siz) {
+        if (n < 0 || (size_t)n < siz) {
             gli_strict_warning(buf);
             free(buf);
             return;
         }
-        siz = n + 1;
+        siz = (size_t)n + 1;
         free(buf);
     }
 }
@@ -327,7 +371,7 @@ glui32 gli_sound_gestalt(glui32 id)
     case gestalt_SoundMusic:
     case gestalt_SoundNotify:
     case gestalt_SoundVolume:
-        return pref_sound;
+        return pref_sound ? 1 : 0;
     default:
         return FALSE;
     }
@@ -357,48 +401,11 @@ void gli_finished_callback(int mix_channel)
             continue;
         }
         if (chan->finished_event_data) {
-            TAILQ_INSERT_TAIL(&schannel_events, chan->finished_event_data, entries);
+            TAILQ_INSERT_TAIL(&schannel_events, chan->finished_event_data,
+                              entries);
             chan->finished_event_data = NULL;
             break;
         }
-    }
-    SDL_UnlockMutex(mutex);
-}
-
-void gli_set_volume(schanid_t chan, glui32 vol, glui32 duration, glui32 notify)
-{
-    if (!chan) {
-        warningf("sound: invalid channel");
-        return;
-    }
-
-    SDL_LockMutex(mutex);
-    if (duration == 0) {
-        chan->volume_current = vol;
-        if (chan->mix_chunk) {
-            Mix_Volume(chan->mix_channel,
-                       glkvolume_to_mixvolume(chan->volume_current));
-        }
-    } else {
-        if (notify) {
-            chan->volume_event_data = malloc(sizeof(schannel_event_t));
-            if (!chan->volume_event_data) {
-                return;
-            }
-            chan->volume_event_data->event.type = evtype_VolumeNotify;
-            chan->volume_event_data->event.win = NULL;
-            chan->volume_event_data->event.val1 = 0;
-            chan->volume_event_data->event.val2 = notify;
-            chan->volume_event_data->chan = chan;
-        }
-        chan->volume_begin = chan->volume_current;
-        chan->volume_end = vol;
-        chan->volume_ticks_begin = SDL_GetTicks();
-        chan->volume_ticks_duration = duration;
-        if (chan->volume_sdl_timerid) {
-            SDL_RemoveTimer(chan->volume_sdl_timerid);
-        }
-        chan->volume_sdl_timerid = SDL_AddTimer(100, &gli_volume_callback, chan);
     }
     SDL_UnlockMutex(mutex);
 }
@@ -413,15 +420,16 @@ Uint32 gli_volume_callback(Uint32 interval, void *param)
     ticks_passed = SDL_GetTicks() - chan->volume_ticks_begin;
     progress = (double)(ticks_passed) / chan->volume_ticks_duration;
     if (progress >= 0 && progress < 1) {
-        int total_increase = chan->volume_end - chan->volume_begin;
+        glui32 total_increase = chan->volume_end - chan->volume_begin;
         chan->volume_current =
-            (int)(progress * total_increase + chan->volume_begin);
+            (glui32)(progress * total_increase + chan->volume_begin);
     } else {
         SDL_RemoveTimer(chan->volume_sdl_timerid);
         chan->volume_sdl_timerid = 0;
         chan->volume_current = chan->volume_end;
         if (chan->volume_event_data) {
-            TAILQ_INSERT_TAIL(&schannel_events, chan->volume_event_data, entries);
+            TAILQ_INSERT_TAIL(&schannel_events, chan->volume_event_data,
+                              entries);
             chan->volume_event_data = NULL;
         }
     }
@@ -559,7 +567,7 @@ void glk_schannel_stop(schanid_t chan)
 
 void glk_schannel_set_volume(schanid_t chan, glui32 vol)
 {
-    gli_set_volume(chan, vol, 0, 0);
+    set_volume(chan, vol, 0, 0);
 }
 
 void glk_sound_load_hint(glui32 snd, glui32 flag)
@@ -592,7 +600,7 @@ schanid_t glk_schannel_create_ext(glui32 rock, glui32 volume)
 glui32 glk_schannel_play_multi(schanid_t *chanarray, glui32 chancount,
   glui32 *sndarray, glui32 soundcount, glui32 notify)
 {
-    int ret = 0;
+    glui32 ret = 0;
     glui32 i;
 
     for (i = 0; i < chancount; ++i) {
@@ -633,7 +641,7 @@ void glk_schannel_unpause(schanid_t chan)
 void glk_schannel_set_volume_ext(schanid_t chan, glui32 vol,
                                  glui32 duration, glui32 notify)
 {
-    gli_set_volume(chan, vol, duration, notify);
+    set_volume(chan, vol, duration, notify);
 }
 
 #endif /* GLK_MODULE_SOUND2 */
