@@ -61,7 +61,7 @@ static struct rgb_name_struct {
 #define R_PART(color) (((glsi32)color >> 16) & 0xFF)
 #define G_PART(color) (((glsi32)color >> 8) & 0xFF)
 #define B_PART(color) ((glsi32)color & 0xFF)
-#define SCALE_255_1000(byte) (((int)(byte) * 1000 + 127) / 255)
+#define SCALE_255_1000(byte) ((short)(((int)(byte) * 1000 + 127) / 255))
 
 /* We can't really know the actual colors the user sees. These are taken from
     XTerm. */
@@ -257,7 +257,8 @@ static int get_nearest_curses_color(glsi32 color)
 
 void gli_initialize_styles(void)
 {
-    int i, colori;
+    short i;
+    int colori;
 
     if (pref_color && start_color() != ERR) {
         use_default_colors();
@@ -268,7 +269,7 @@ void gli_initialize_styles(void)
             fflush(stdout);
             /* Set the first 8 or 16 colors to match what we expect. */
             if (COLORS >= 8) {
-                int i, n = COUNTOF(xterm_16colors);
+                int n = COUNTOF(xterm_16colors);
                 if (n > COLORS) {
                     n = COLORS;
                 }
@@ -283,7 +284,8 @@ void gli_initialize_styles(void)
                                SCALE_255_1000(B_PART(xterm_16colors[i])));
                 }
                 if (COLORS == 256) {
-                    int ri, gi, bi, n = COUNTOF(xterm_256color_steps);
+                    short ri, gi, bi;
+                    n = COUNTOF(xterm_256color_steps);
                     /* Reset the 6x6 color cube to what we expect. */
                     for ((void)(ri = 0), i = 16; ri < n; ++ri) {
                         for (gi = 0; gi < n; ++gi) {
@@ -406,16 +408,16 @@ int gli_get_color_for_name(const char *name, glsi32 *color)
     struct rgb_name_struct *rgb_name;
 
     if (len == 7 && sscanf(name, "#%2X%2X%2X", &r, &g, &b) == 3) {
-        *color = (r << 16) | (g << 8) | b;
+        *color = (glsi32)((r << 16) | (g << 8) | b);
         return TRUE;
     } else if (len == 4 && sscanf(name, "#%1X%1X%1X", &r, &g, &b) == 3) {
-        *color = ((r * 0x11) << 16) | ((g * 0x11) << 8) | (b * 0x11);
+        *color = (glsi32)(((r * 0x11) << 16) | ((g * 0x11) << 8) | (b * 0x11));
         return TRUE;
     }
 
     name_lower = strdup(name);
     for (i = 0; name_lower[i]; ++i) {
-        name_lower[i] = tolower(name_lower[i]);
+        name_lower[i] = (char)tolower(name_lower[i]);
     }
     rgb_name = bsearch(name_lower, rgb_names, COUNTOF(rgb_names),
                        sizeof(rgb_names[0]), compare_rgb_names);
@@ -488,12 +490,12 @@ void gli_set_inline_colors(stream_t *str, glui32 fg, glui32 bg)
         return;
 
     if ((glsi32)fg >= -1 && (glsi32)fg <= 0xFFFFFF) {
-        str->win->styleplus.inline_fgcolor = fg;
-        str->win->styleplus.inline_fgi = get_nearest_curses_color(fg);
+        str->win->styleplus.inline_fgcolor = (glsi32)fg;
+        str->win->styleplus.inline_fgi = get_nearest_curses_color((glsi32)fg);
     }
     if ((glsi32)bg >= -1 && (glsi32)bg <= 0xFFFFFF) {
-        str->win->styleplus.inline_bgcolor = bg;
-        str->win->styleplus.inline_bgi = get_nearest_curses_color(bg);
+        str->win->styleplus.inline_bgcolor = (glsi32)bg;
+        str->win->styleplus.inline_bgi = get_nearest_curses_color((glsi32)bg);
     }
 
     if (str->win->echostr) {
@@ -508,7 +510,7 @@ void gli_set_inline_reverse(stream_t *str, glui32 reverse)
         return;
     }
 
-    str->win->styleplus.inline_reverse = reverse;
+    str->win->styleplus.inline_reverse = reverse ? 1 : 0;
     if (str->win->echostr)
         gli_set_inline_reverse(str->win->echostr, reverse);
 }
@@ -693,23 +695,23 @@ glui32 glk_style_measure(window_t *win, glui32 styl, glui32 hint,
             *result = 1;
             return TRUE;
         case stylehint_Weight:
-            *result = win->stylehints[styl].weight;
+            *result = (glui32)win->stylehints[styl].weight;
             return TRUE;
         case stylehint_Oblique:
-            *result = win->stylehints[styl].oblique;
+            *result = (glui32)win->stylehints[styl].oblique;
             return TRUE;
         case stylehint_Proportional:
             *result = FALSE;
             return TRUE;
         case stylehint_TextColor:
-            *result = win->stylehints[styl].textcolor;
+            *result = (glui32)win->stylehints[styl].textcolor;
             return TRUE;
         case stylehint_BackColor:
-            *result = win->stylehints[styl].backcolor;
+            *result = (glui32)win->stylehints[styl].backcolor;
             return TRUE;
         case stylehint_ReverseColor:
             /* This does not look at inline_reverse. */
-            *result = win->stylehints[styl].reversecolor;
+            *result = (glui32)win->stylehints[styl].reversecolor;
             return TRUE;
     }
     
