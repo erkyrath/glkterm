@@ -41,9 +41,9 @@ static const cssrgb_t cssrgbs[] = {
 #define PAIR_MAX SHRT_MAX
 #endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170401) */
 
-#if defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20200411)
-/* Earlier versions of ncurses had a broken find_pair and alloc_pair. */
-#define USE_NCURSES_ALLOC_PAIR
+#if defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170311)
+/* Some versions of ncurses had a broken find_pair and alloc_pair. */
+#define TRY_NCURSES_ALLOC_PAIR
 #endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20200411) */
 
 /* If we don't have italics, use underline. (This is also a command-line option
@@ -91,7 +91,6 @@ typedef struct stylehint_struct {
 static stylehint_t textbuffer_stylehints[style_NUMSTYLES];
 static stylehint_t textgrid_stylehints[style_NUMSTYLES];
 
-#ifndef USE_NCURSES_ALLOC_PAIR
 /* A list with all the pairs. In lieu of a proper map, we look for the correct
     color indexes to get the pair number. */
 static struct pair_struct {
@@ -100,19 +99,37 @@ static struct pair_struct {
     int bgi; /* Index for foreground (depends on terminal) */
     struct pair_struct *next;
 } *pairs_head = NULL;
-#endif /* USE_NCURSES_ALLOC_PAIR */
 
 static int alloc_curses_pair(int fgi, int bgi)
 {
-#ifdef USE_NCURSES_ALLOC_PAIR
-    int ret = alloc_pair(fgi, bgi);
-    return (ret >= 0) ? ret : 0;
-#else
+#ifdef TRY_NCURSES_ALLOC_PAIR
+    static int use_alloc_pair = -1;
+#endif /* TRY_NCURSES_ALLOC_PAIR */
     struct pair_struct *node = NULL, *prev_node = NULL;
     int pair = 1, count = 0;
     if (fgi == -1 && bgi == -1) {
         return 0;
     }
+#ifdef TRY_NCURSES_ALLOC_PAIR
+    if (use_alloc_pair) {
+        /* Ncurses had an error in find_pair and alloc_pair that was fixed in
+            patch 20200411. We try alloc_pair, and if it works, we use it. */
+        int ret1 = alloc_pair(fgi, bgi), ret2 = -1;
+        if (use_alloc_pair < 0) {
+            ret2 = alloc_pair(fgi, bgi);
+            use_alloc_pair = (ret1 == ret2) ? 1 : 0;
+        }
+        if (use_alloc_pair) {
+            return ret1;
+        }
+        if (ret1 > 0) {
+            free_pair(ret1);
+        }
+        if (ret2 > 0) {
+            free_pair(ret2);
+        }
+    }
+#endif /* TRY_NCURSES_ALLOC_PAIR */
     for ((void)(node = pairs_head), prev_node = NULL; node;
          prev_node = node, node = node->next) {
         ++count;
@@ -145,7 +162,6 @@ static int alloc_curses_pair(int fgi, int bgi)
     node->next = pairs_head;
     pairs_head = node;
     return pair;
-#endif /* USE_NCURSES_ALLOC_PAIR */
 }
 
 static int color_distance_squared(int r1, int g1, int b1,
@@ -525,13 +541,11 @@ void gli_destroy_window_styles(window_t *win)
 
 void gli_shutdown_styles(void)
 {
-#ifndef USE_NCURSES_ALLOC_PAIR
     struct pair_struct *pair_node = pairs_head, *tmp = NULL;
     for (; pair_node; pair_node = tmp) {
         tmp = pair_node->next;
         free(pair_node);
     }
-#endif /* USE_NCURSES_ALLOC_PAIR */
 
     if (can_change_color()) {
         putp(orig_colors);
