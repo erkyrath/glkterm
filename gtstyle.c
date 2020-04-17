@@ -23,10 +23,11 @@
     later. */
 #include <term.h>
 
-static struct rgb_name_struct {
+typedef struct cssrgb_struct {
     const char *name;
     glsi32 rgb;
-} rgb_names[] = {
+} cssrgb_t;
+static const cssrgb_t cssrgbs[] = {
 #include "cssrgb.h"
 };
 
@@ -392,9 +393,9 @@ int gli_compare_styles(const styleplus_t *styleplus1,
     return 0;
 }
 
-static int compare_rgb_names(const void *lhs, const void *rhs)
+static int compare_cssrgb(const void *lhs, const void *rhs)
 {
-    return strcmp((const char *)lhs, ((struct rgb_name_struct *)rhs)->name);
+    return strcmp((const char *)lhs, ((cssrgb_t *)rhs)->name);
 }
 
 /* Sets color to [0, 0xFFFFFF] (color) or -1 if successful.
@@ -405,7 +406,7 @@ int gli_get_color_for_name(const char *name, glsi32 *color)
     unsigned int r, g, b;
     size_t i;
     char *name_lower;
-    struct rgb_name_struct *rgb_name;
+    cssrgb_t *cssrgb;
 
     if (len == 7 && sscanf(name, "#%2X%2X%2X", &r, &g, &b) == 3) {
         *color = (glsi32)((r << 16) | (g << 8) | b);
@@ -419,13 +420,13 @@ int gli_get_color_for_name(const char *name, glsi32 *color)
     for (i = 0; name_lower[i]; ++i) {
         name_lower[i] = (char)tolower(name_lower[i]);
     }
-    rgb_name = bsearch(name_lower, rgb_names, COUNTOF(rgb_names),
-                       sizeof(rgb_names[0]), compare_rgb_names);
+    cssrgb = bsearch(name_lower, cssrgbs, COUNTOF(cssrgbs), sizeof(cssrgbs[0]),
+                     compare_cssrgb);
     free(name_lower);
-    if (!rgb_name) {
+    if (!cssrgb) {
         return FALSE;
     }
-    *color = rgb_name->rgb;
+    *color = cssrgb->rgb;
     return TRUE;
 }
 
