@@ -21,7 +21,9 @@
 #include "gtw_buf.h"
 /* This has a lot of macros that conflict with existing code, so we include it
     later. */
+#ifndef PDCURSES
 #include <term.h>
+#endif
 
 typedef struct cssrgb_struct {
     const char *name;
@@ -172,6 +174,14 @@ static int color_distance_squared(int r1, int g1, int b1,
             (b2 - b1) * (b2 - b1));
 }
 
+static void reset_terminal_colors()
+{
+#ifndef PDCURSES
+    putp(orig_colors);
+    fflush(stdout);
+#endif
+}
+
 static void rgblevel_to_6x6(int level, int *index, uint8_t *out)
 {
     if (level < 48) {
@@ -280,10 +290,7 @@ void gli_initialize_styles(void)
     if (pref_color && start_color() != ERR) {
         use_default_colors();
         if (can_change_color()) {
-            /* Reset the terminal's colors. We'll also set the colors to known
-                defaults. */
-            putp(orig_colors);
-            fflush(stdout);
+            reset_terminal_colors();
             /* Set the first 8 or 16 colors to match what we expect. */
             if (COLORS >= 8) {
                 int n = COUNTOF(xterm_16colors);
@@ -548,8 +555,7 @@ void gli_shutdown_styles(void)
     }
 
     if (can_change_color()) {
-        putp(orig_colors);
-        fflush(stdout);
+        reset_terminal_colors();
     }
 }
 
