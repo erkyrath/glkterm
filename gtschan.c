@@ -420,7 +420,7 @@ Uint32 gli_volume_callback(Uint32 interval, void *param)
     ticks_passed = SDL_GetTicks() - chan->volume_ticks_begin;
     progress = (double)(ticks_passed) / chan->volume_ticks_duration;
     if (progress >= 0 && progress < 1) {
-        glui32 total_increase = chan->volume_end - chan->volume_begin;
+        glsi32 total_increase = chan->volume_end - chan->volume_begin;
         chan->volume_current =
             (glui32)(progress * total_increase + chan->volume_begin);
     } else {
