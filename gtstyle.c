@@ -710,7 +710,7 @@ glui32 glk_style_measure(window_t *win, glui32 styl, glui32 hint,
             *result = 0;
             return TRUE;
         case stylehint_Justification:
-            *result = stylehint_just_LeftFlush ? 1 : 0;
+            *result = stylehint_just_LeftFlush;
             return TRUE;
         case stylehint_Size:
             *result = 1;
