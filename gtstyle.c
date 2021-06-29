@@ -377,6 +377,7 @@ void gli_initialize_window_styles(window_t *win)
     } else if (win->type == wintype_TextGrid) {
         stylehints = textgrid_stylehints;
     } else {
+        win->stylehints = NULL;
         return;
     }
     win->stylehints = malloc(sizeof(stylehint_t) * style_NUMSTYLES);
