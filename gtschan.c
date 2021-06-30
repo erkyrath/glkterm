@@ -116,7 +116,7 @@ static int load_resource(glui32 snd, Mix_Chunk **pmix_chunk)
 
     /* If the resource map hasn't been set, we might still have sound files
         alongside the game file.
-        https://www.eblong.com/zarf/glk/glk-spec-075_12.html#s.2.2
+        https://www.eblong.com/zarf/glk/Glk-Spec-075.html#blorb_user
         https://www.eblong.com/zarf/blorb/blorb.html#s16 */
 
     /* Have we already loaded this one? */
