@@ -17,7 +17,6 @@
 #include <SDL.h>
 #include <SDL_mixer.h>
 #include "gi_blorb.h"
-#include "queue.h"
 
 #define GLK_MAX_VOLUME 0x10000
 #define GLK_SOUND_FREQUENCY 44100

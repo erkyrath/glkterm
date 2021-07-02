@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include "gi_dispa.h"
-#include "queue.h"
+#include "tailq.h"
 
 /* We define our own TRUE and FALSE and NULL, because ANSI
     is a strange world. */

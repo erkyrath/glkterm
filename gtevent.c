@@ -16,7 +16,6 @@
 #include <curses.h>
 #include "glk.h"
 #include "glkterm.h"
-#include "queue.h"
 
 /* A queue with pending events. */
 typedef struct event_node_struct {
