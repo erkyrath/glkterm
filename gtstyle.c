@@ -46,7 +46,7 @@ static const cssrgb_t cssrgbs[] = {
 #if defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170311)
 /* Some versions of ncurses had a broken find_pair and alloc_pair. */
 #define TRY_NCURSES_ALLOC_PAIR
-#endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20200411) */
+#endif /* defined(NCURSES_VERSION) && (NCURSES_VERSION_PATCH >= 20170311) */
 
 /* If we don't have italics, use underline. (This is also a command-line option
     when italics are available.) */
