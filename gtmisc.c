@@ -145,6 +145,10 @@ void glk_exit()
     gli_msgin_getchar("Hit any key to exit.", TRUE);
 
     gli_streams_close_all();
+#ifdef GLK_MODULE_SOUND
+    gli_shutdown_sound();
+#endif
+    gli_shutdown_events();
 
     endwin();
     putchar('\n');
@@ -168,6 +172,7 @@ void gidispatch_set_object_registry(
     window_t *win;
     stream_t *str;
     fileref_t *fref;
+    schannel_t *schan;
     
     gli_register_obj = regi;
     gli_unregister_obj = unregi;
@@ -190,6 +195,13 @@ void gidispatch_set_object_registry(
             fref = glk_fileref_iterate(fref, NULL)) {
             fref->disprock = (*gli_register_obj)(fref, gidisp_Class_Fileref);
         }
+#ifdef GLK_MODULE_SOUND
+        for (schan = glk_schannel_iterate(NULL, NULL);
+            schan;
+            schan = glk_schannel_iterate(schan, NULL)) {
+            schan->disprock = (*gli_register_obj)(schan, gidisp_Class_Schannel);
+        }
+#endif
     }
 }
 
@@ -211,6 +223,8 @@ gidispatch_rock_t gidispatch_get_objrock(void *obj, glui32 objclass)
             return ((stream_t *)obj)->disprock;
         case gidisp_Class_Fileref:
             return ((fileref_t *)obj)->disprock;
+        case gidisp_Class_Schannel:
+            return ((schannel_t *)obj)->disprock;
         default: {
             gidispatch_rock_t dummy;
             dummy.num = 0;

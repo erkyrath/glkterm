@@ -25,6 +25,7 @@ int pref_window_borders = FALSE;
 int pref_precise_timing = FALSE;
 int pref_historylen = 20;
 int pref_prompt_defaults = TRUE;
+int pref_sound = TRUE;
 
 /* Some constants for my wacky little command-line option parser. */
 #define ex_Void (0)
@@ -32,7 +33,6 @@ int pref_prompt_defaults = TRUE;
 #define ex_Bool (2)
 
 static int errflag = FALSE;
-static int inittime = FALSE;
 
 static int extract_value(int argc, char *argv[], char *optname, int type,
     int *argnum, int *result, int defval);
@@ -177,6 +177,10 @@ int main(int argc, char *argv[])
         else if (extract_value(argc, argv, "precise", ex_Bool, &ix, &val, pref_precise_timing))
             pref_precise_timing = val;
 #endif /* !OPT_TIMED_INPUT */
+#ifdef GLK_MODULE_SOUND
+        else if (extract_value(argc, argv, "sound", ex_Bool, &ix, &val, pref_sound))
+            pref_sound = val;
+#endif /* GLK_MODULE_SOUND */
         else {
             printf("%s: unknown option: %s\n", argv[0], argv[ix]);
             errflag = TRUE;
@@ -214,6 +218,9 @@ int main(int argc, char *argv[])
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");
 #endif /* !OPT_TIMED_INPUT */
+#ifdef GLK_MODULE_SOUND
+        printf("  -sound BOOL: enable sound (default 'yes')\n");
+#endif /* GLK_MODULE_SOUND */
         printf("  -version: display Glk library version\n");
         printf("  -help: display this list\n");
         printf("NUM values can be any number. BOOL values can be 'yes' or 'no', or no value to toggle.\n");
@@ -235,12 +242,13 @@ int main(int argc, char *argv[])
     gli_initialize_misc();
     gli_initialize_windows();
     gli_initialize_events();
+#ifdef GLK_MODULE_SOUND
+    gli_initialize_sound();
+#endif
     
-    inittime = TRUE;
     if (!glkunix_startup_code(&startdata)) {
         glk_exit();
     }
-    inittime = FALSE;
     /* Call the program main entry point, and then exit. */
     glk_main();
     glk_exit();
@@ -356,27 +364,19 @@ static int string_to_bool(char *str)
 
 /* This opens a file for reading or writing. (You cannot open a file
    for appending using this call.)
-
-   This should be used only by glkunix_startup_code(). 
 */
 strid_t glkunix_stream_open_pathname_gen(char *pathname, glui32 writemode,
     glui32 textmode, glui32 rock)
 {
-    if (!inittime)
-        return 0;
     return gli_stream_open_pathname(pathname, (writemode != 0), (textmode != 0), rock);
 }
 
 /* This opens a file for reading. It is a less-general form of 
    glkunix_stream_open_pathname_gen(), preserved for backwards 
    compatibility.
-
-   This should be used only by glkunix_startup_code().
 */
 strid_t glkunix_stream_open_pathname(char *pathname, glui32 textmode, 
     glui32 rock)
 {
-    if (!inittime)
-        return 0;
     return gli_stream_open_pathname(pathname, FALSE, (textmode != 0), rock);
 }

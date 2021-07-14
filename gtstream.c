@@ -40,6 +40,7 @@ stream_t *gli_new_stream(int type, int readable, int writable,
     
     str->win = NULL;
     str->file = NULL;
+    str->filename = NULL;
     str->lastop = 0;
     str->buf = NULL;
     str->bufptr = NULL;
@@ -103,6 +104,8 @@ void gli_delete_stream(stream_t *str)
             /* close the FILE */
             fclose(str->file);
             str->file = NULL;
+            free(str->filename);
+            str->filename = NULL;
             str->lastop = 0;
             break;
     }
@@ -295,6 +298,7 @@ strid_t glk_stream_open_file(fileref_t *fref, glui32 fmode,
     }
     
     str->file = fl;
+    str->filename = strdup(fref->filename);
     str->lastop = 0;
     
     return str;
@@ -486,6 +490,7 @@ strid_t gli_stream_open_pathname(char *pathname, int writemode,
     }
     
     str->file = fl;
+    str->filename = strdup(pathname);
     str->lastop = 0;
     
     return str;

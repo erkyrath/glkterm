@@ -109,11 +109,16 @@ glui32 glk_gestalt_ext(glui32 id, glui32 val, glui32 *arr, glui32 arrlen)
 #endif /* GLK_MODULE_UNICODE_NORM */
             
         case gestalt_Sound:
+        case gestalt_Sound2:
         case gestalt_SoundVolume:
         case gestalt_SoundNotify: 
         case gestalt_SoundMusic:
+#ifdef GLK_MODULE_SOUND
+            return gli_sound_gestalt(id);
+#else
             return FALSE;
-  
+#endif
+
         case gestalt_LineInputEcho:
             return TRUE;
 

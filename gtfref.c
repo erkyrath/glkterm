@@ -23,7 +23,7 @@ static fileref_t *gli_filereflist = NULL;
 
 #define BUFLEN (256)
 
-static char workingdir[BUFLEN] = ".";
+char gli_workingdir[256] = ".";
 static char lastsavename[BUFLEN] = "game.glksave";
 static char lastscriptname[BUFLEN] = "script.txt";
 static char lastcmdname[BUFLEN] = "commands.txt";
@@ -190,7 +190,7 @@ frefid_t glk_fileref_create_by_name(glui32 usage, char *name,
     }
     
     suffix = gli_suffix_for_usage(usage);
-    sprintf(buf2, "%s/%s%s", workingdir, buf, suffix);
+    sprintf(buf2, "%s/%s%s", gli_workingdir, buf, suffix);
 
     fref = gli_new_fileref(buf2, usage, rock);
     if (!fref) {
@@ -274,7 +274,7 @@ frefid_t glk_fileref_create_by_prompt(glui32 usage, glui32 fmode,
     if (cx[0] == '/')
         strcpy(newbuf, cx);
     else
-        sprintf(newbuf, "%s/%s", workingdir, cx);
+        sprintf(newbuf, "%s/%s", gli_workingdir, cx);
     
     /* If there is no dot-suffix, add a standard one. */
     val = strlen(newbuf);
@@ -393,8 +393,8 @@ void glkunix_set_base_file(char *filename)
 
     if (ix >= 0) {
         /* There is a slash. */
-        strncpy(workingdir, filename, ix);
-        workingdir[ix] = '\0';
+        strncpy(gli_workingdir, filename, ix);
+        gli_workingdir[ix] = '\0';
         ix++;
     }
     else {
