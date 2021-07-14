@@ -24,9 +24,6 @@ static void export_input_line(void *buf, int unicode, long len, char *chars);
 static void import_input_line(tgline_t *ln, int offset, void *buf, 
     int unicode, long len);
 
-/* Array of curses.h attribute values, one for each style. */
-chtype win_textgrid_styleattrs[style_NUMSTYLES];
-
 /* This macro sets the appropriate dirty values, when a single character
     (at px, py) is changed. */
 #define setposdirty(dwn, ll, px, py)   \
@@ -113,7 +110,7 @@ void win_textgrid_rearrange(window_t *win, grect_t *box)
                 tgline_t *ln = &(dwin->lines[jx]);
                 for (ix=0; ix<ln->size; ix++) {
                     ln->chars[ix] = ' ';
-                    ln->attrs[ix] = style_Normal;
+                    gli_reset_styleplus(&ln->styleplusses[ix], style_Normal);
                 }
             }
         }
@@ -124,15 +121,15 @@ void win_textgrid_rearrange(window_t *win, grect_t *box)
                 ln->size = (newwid+1) * 2;
                 ln->chars = (char *)realloc(ln->chars, 
                     ln->size * sizeof(char));
-                ln->attrs = (unsigned char *)realloc(ln->attrs, 
-                    ln->size * sizeof(unsigned char));
-                if (!ln->chars || !ln->attrs) {
+                ln->styleplusses = realloc(ln->styleplusses, 
+                    ln->size * sizeof(styleplus_t));
+                if (!ln->chars || !ln->styleplusses) {
                     dwin->lines = NULL;
                     return;
                 }
                 for (ix=oldval; ix<ln->size; ix++) {
                     ln->chars[ix] = ' ';
-                    ln->attrs[ix] = style_Normal;
+                    gli_reset_styleplus(&ln->styleplusses[ix], style_Normal);
                 }
             }
         }
@@ -155,14 +152,14 @@ static void init_lines(window_textgrid_t *dwin, int beg, int end, int linewid)
         ln->dirtybeg = -1;
         ln->dirtyend = -1;
         ln->chars = (char *)malloc(ln->size * sizeof(char));
-        ln->attrs = (unsigned char *)malloc(ln->size * sizeof(unsigned char));
+        ln->styleplusses = malloc(ln->size * sizeof(styleplus_t));
         if (!ln->chars || !ln->size) {
             dwin->lines = NULL;
             return;
         }
         for (ix=0; ix<ln->size; ix++) {
             ln->chars[ix] = ' ';
-            ln->attrs[ix] = style_Normal;
+            gli_reset_styleplus(&ln->styleplusses[ix], style_Normal);
         }
     }
 }
@@ -177,9 +174,9 @@ static void final_lines(window_textgrid_t *dwin)
             free(ln->chars);
             ln->chars = NULL;
         }
-        if (ln->attrs) {
-            free(ln->attrs);
-            ln->attrs = NULL;
+        if (ln->styleplusses) {
+            free(ln->styleplusses);
+            ln->styleplusses = NULL;
         }
     }
     
@@ -191,7 +188,7 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
 {
     int ix, jx, beg, iix;
     int orgx, orgy;
-    unsigned char curattr;
+    styleplus_t curstyleplus;
     
     if (drawall) {
         dwin->dirtybeg = 0;
@@ -231,9 +228,12 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
         while (ix<ln->dirtyend) {
             unsigned char *ucx;
             beg = ix;
-            curattr = ln->attrs[beg];
-            for (ix++; ix<ln->dirtyend && ln->attrs[ix] == curattr; ix++) { }
-            attrset(win_textgrid_styleattrs[curattr]);
+            curstyleplus = ln->styleplusses[beg];
+            for (ix++;
+                 (ix<ln->dirtyend &&
+                  gli_compare_styles(&ln->styleplusses[ix], &curstyleplus) == 0);
+                 ix++) { }
+            gli_set_window_style(dwin->owner, &curstyleplus);
             ucx = (unsigned char *)ln->chars; /* unsigned, so that addch() doesn't
                 get fed any high style bits. */
             for (iix=beg; iix<ix; iix++) {
@@ -245,7 +245,7 @@ static void updatetext(window_textgrid_t *dwin, int drawall)
         ln->dirtyend = -1;
     }
     
-    attrset(0);
+    gli_set_window_style(dwin->owner, NULL);
     
     dwin->dirtybeg = -1;
     dwin->dirtyend = -1;
@@ -303,7 +303,7 @@ void win_textgrid_putchar(window_t *win, char ch)
     setposdirty(dwin, ln, dwin->curx, dwin->cury);
     
     ln->chars[dwin->curx] = ch;
-    ln->attrs[dwin->curx] = win->style;
+    ln->styleplusses[dwin->curx] = win->styleplus;
     
     dwin->curx++;
     /* We can leave the cursor outside the window, since it will be
@@ -319,7 +319,7 @@ void win_textgrid_clear(window_t *win)
         tgline_t *ln = &(dwin->lines[jx]);
         for (ix=0; ix<dwin->width; ix++) {
             ln->chars[ix] = ' ';
-            ln->attrs[ix] = style_Normal;
+            gli_reset_styleplus(&ln->styleplusses[ix], style_Normal);
         }
         ln->dirtybeg = 0;
         ln->dirtyend = dwin->width;
@@ -388,9 +388,9 @@ void win_textgrid_init_line(window_t *win, void *buf, int unicode,
     dwin->inorgx = dwin->curx;
     dwin->inorgy = dwin->cury;
     dwin->intermkeys = win->terminate_line_input;
-    dwin->origstyle = win->style;
-    win->style = style_Input;
-    
+    dwin->origstyleplus = win->styleplus;
+    gli_reset_styleplus(&win->styleplus, style_Input);
+
     if (initlen > maxlen)
         initlen = maxlen;
         
@@ -450,7 +450,7 @@ void win_textgrid_cancel_line(window_t *win, event_t *ev)
 
     dwin->cury = dwin->inorgy+1;
     dwin->curx = 0;
-    win->style = dwin->origstyle;
+    win->styleplus = dwin->origstyleplus;
 
     ev->type = evtype_LineInput;
     ev->win = win;
@@ -478,7 +478,7 @@ static void import_input_line(tgline_t *ln, int offset, void *buf,
     if (!unicode) {
         for (ix=0; ix<len; ix++) {
             char ch = ((char *)buf)[ix];
-            ln->attrs[offset+ix] = style_Input;
+            gli_reset_styleplus(&ln->styleplusses[offset+ix], style_Input);
             ln->chars[offset+ix] = ch;
         }
     }
@@ -487,7 +487,7 @@ static void import_input_line(tgline_t *ln, int offset, void *buf,
             glui32 kval = ((glui32 *)buf)[ix];
             if (!(kval >= 0 && kval < 256))
                 kval = '?';
-            ln->attrs[offset+ix] = style_Input;
+            gli_reset_styleplus(&ln->styleplusses[offset+ix], style_Input);
             ln->chars[offset+ix] = kval;
         }
     }
@@ -559,7 +559,7 @@ void gcmd_grid_accept_line(window_t *win, glui32 arg)
 
     dwin->cury = dwin->inorgy+1;
     dwin->curx = 0;
-    win->style = dwin->origstyle;
+    win->styleplus = dwin->origstyleplus;
 
     if (arg)
         termkey = gli_input_from_native(arg);
@@ -598,7 +598,7 @@ void gcmd_grid_insert_key(window_t *win, glui32 arg)
     
     for (ix=dwin->inlen; ix>dwin->incurs; ix--) 
         ln->chars[dwin->inorgx+ix] = ln->chars[dwin->inorgx+ix-1];
-    ln->attrs[dwin->inorgx+dwin->inlen] = style_Input;
+    gli_reset_styleplus(&ln->styleplusses[dwin->inorgx+dwin->inlen], style_Input);
     ln->chars[dwin->inorgx+dwin->incurs] = arg;
     
     setposdirty(dwin, ln, dwin->inorgx+dwin->incurs, dwin->inorgy);

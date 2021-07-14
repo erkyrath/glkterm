@@ -145,6 +145,7 @@ void glk_exit()
     gli_msgin_getchar("Hit any key to exit.", TRUE);
 
     gli_streams_close_all();
+    gli_shutdown_styles();
 
     endwin();
     putchar('\n');

@@ -13,9 +13,6 @@
 #include "glkterm.h"
 #include "gtw_buf.h"
 
-/* Array of curses.h attribute values, one for each style. */
-chtype win_textbuffer_styleattrs[style_NUMSTYLES];
-
 /* Maximum buffer size. The slack value is how much larger than the size 
     we should get before we trim. */
 #define BUFFER_SIZE (5000)
@@ -24,7 +21,7 @@ chtype win_textbuffer_styleattrs[style_NUMSTYLES];
 static void final_lines(window_textbuffer_t *dwin, long beg, long end);
 static long find_style_by_pos(window_textbuffer_t *dwin, long pos);
 static long find_line_by_pos(window_textbuffer_t *dwin, long pos);
-static void set_last_run(window_textbuffer_t *dwin, glui32 style);
+static void set_last_run(window_textbuffer_t *dwin, const styleplus_t *styleplus);
 static void import_input_line(window_textbuffer_t *dwin, void *buf, 
     int unicode, long len);
 static void export_input_line(void *buf, int unicode, long len, char *chars);
@@ -63,7 +60,7 @@ window_textbuffer_t *win_textbuffer_create(window_t *win)
     dwin->intermkeys = 0;
     
     dwin->numruns = 1;
-    dwin->runs[0].style = style_Normal;
+    gli_reset_styleplus(&dwin->runs[0].styleplus, style_Normal);
     dwin->runs[0].pos = 0;
     
     if (pref_historylen > 1) {
@@ -201,6 +198,9 @@ static long find_style_by_pos(window_textbuffer_t *dwin, long pos)
     /* Do a binary search, maintaining 
             runs[beg].pos <= pos < runs[end].pos
         (we pretend that runs[numruns].pos is infinity) */
+    if (pos == 0) {
+        return 0;
+    }
     
     beg = 0;
     end = dwin->numruns;
@@ -229,7 +229,7 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
     long linestartpos;
     char ch;
     int lastlinetype;
-    short style;
+    styleplus_t styleplus;
     long styleendpos;
     /* cache some values */
     char *chars = dwin->chars;
@@ -242,7 +242,7 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
     numwords = 0; /* actually number of tmpwords */
     
     rx = find_style_by_pos(dwin, chbeg);
-    style = runs[rx].style;
+    styleplus = runs[rx].styleplus;
     if (rx+1 >= dwin->numruns)
         styleendpos = chend+1;
     else
@@ -299,7 +299,7 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
                     wd->type = wd_EndLine;
                     wd->pos = cx2;
                     wd->len = 0;
-                    wd->style = style;
+                    wd->styleplus = styleplus;
                 }
                 else if (ch == ' ') {
                     wd->type = wd_Blank;
@@ -308,7 +308,7 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
                             && cx < styleendpos && chars[cx] == ' ')
                         cx++;
                     wd->len = cx - (wd->pos);
-                    wd->style = style;
+                    wd->styleplus = styleplus;
                 }
                 else {
                     wd->type = wd_Text;
@@ -318,12 +318,12 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
                             && chars[cx] != ' ')
                         cx++;
                     wd->len = cx - (wd->pos);
-                    wd->style = style;
+                    wd->styleplus = styleplus;
                 }
                 
                 if (cx >= styleendpos) {
                     rx++;
-                    style = runs[rx].style;
+                    styleplus = runs[rx].styleplus;
                     if (rx+1 >= dwin->numruns)
                         styleendpos = chend+1;
                     else
@@ -389,7 +389,7 @@ static long layout_chars(window_textbuffer_t *dwin, long chbeg, long chend,
                             numwords++;
                             wd->len -= extra;
                             wd2->type = wd->type;
-                            wd2->style = wd->style;
+                            wd2->styleplus = wd->styleplus;
                             wd2->pos = wd->pos+wd->len;
                             wd2->len = extra;
                             lineover = TRUE;
@@ -608,12 +608,12 @@ static void updatetext(window_textbuffer_t *dwin)
                         unsigned char *cx = (unsigned char *)&(dwin->chars[wd->pos]);
                         /* unsigned, so that addch() doesn't get fed any high
                             style bits. */
-                        attrset(win_textbuffer_styleattrs[wd->style]);
+                        gli_set_window_style(dwin->owner, &wd->styleplus);
                         for (ix=0; ix<wd->len; ix++, cx++, count++)
                             addch(*cx);
                     }
                 }
-                attrset(0);
+                gli_set_window_style(dwin->owner, NULL);
                 gli_print_spaces(dwin->width - count);
             }
             else {
@@ -651,8 +651,9 @@ void win_textbuffer_putchar(window_t *win, char ch)
     
     lx = dwin->numchars;
     
-    if (win->style != dwin->runs[dwin->numruns-1].style) {
-        set_last_run(dwin, win->style);
+    if (gli_compare_styles(&win->styleplus,
+                           &dwin->runs[dwin->numruns-1].styleplus) != 0) {
+        set_last_run(dwin, &win->styleplus);
     }
     
     dwin->chars[lx] = ch;
@@ -672,13 +673,14 @@ void win_textbuffer_putchar(window_t *win, char ch)
     }
 }
 
-static void set_last_run(window_textbuffer_t *dwin, glui32 style)
+static void set_last_run(window_textbuffer_t *dwin,
+                         const styleplus_t *styleplus)
 {
     long lx = dwin->numchars;
     long rx = dwin->numruns-1;
     
     if (dwin->runs[rx].pos == lx) {
-        dwin->runs[rx].style = style;
+        dwin->runs[rx].styleplus = *styleplus;
     }
     else {
         rx++;
@@ -688,7 +690,7 @@ static void set_last_run(window_textbuffer_t *dwin, glui32 style)
                 dwin->runssize * sizeof(tbrun_t));
         }
         dwin->runs[rx].pos = lx;
-        dwin->runs[rx].style = style;
+        dwin->runs[rx].styleplus = *styleplus;
         dwin->numruns++;
     }
 
@@ -746,7 +748,7 @@ void win_textbuffer_clear(window_t *win)
     
     dwin->numchars = 0;
     dwin->numruns = 1;
-    dwin->runs[0].style = win->style;
+    dwin->runs[0].styleplus = win->styleplus;
     dwin->runs[0].pos = 0;
     
     if (dwin->dirtybeg == -1) {
@@ -818,8 +820,9 @@ void win_textbuffer_trim_buffer(window_t *win)
     /* trim runs */
     
     if (snum >= dwin->numruns) {
-        short sstyle = dwin->runs[snum].style;
-        dwin->runs[0].style = sstyle;
+        if (snum != 0) {
+            dwin->runs[0].styleplus = dwin->runs[snum].styleplus;
+        }
         dwin->runs[0].pos = 0;
         dwin->numruns = 1;
     }
@@ -975,9 +978,9 @@ void win_textbuffer_init_line(window_t *win, void *buf, int unicode,
     dwin->incurs = dwin->numchars;
     dwin->inecho = win->echo_line_input;
     dwin->intermkeys = win->terminate_line_input;
-    dwin->origstyle = win->style;
-    win->style = style_Input;
-    set_last_run(dwin, win->style);
+    dwin->origstyleplus = win->styleplus;
+    gli_reset_styleplus(&win->styleplus, style_Input);
+    set_last_run(dwin, &win->styleplus);
     dwin->historypos = dwin->historypresent;
     
     if (initlen) {
@@ -1025,8 +1028,8 @@ void win_textbuffer_cancel_line(window_t *win, event_t *ev)
             dwin->numchars - dwin->infence);
     }
     
-    win->style = dwin->origstyle;
-    set_last_run(dwin, win->style);
+    win->styleplus = dwin->origstyleplus;
+    set_last_run(dwin, &win->styleplus);
 
     ev->type = evtype_LineInput;
     ev->win = win;
@@ -1166,8 +1169,8 @@ void gcmd_buffer_accept_line(window_t *win, glui32 arg)
             dwin->numchars - dwin->infence);
     }
     
-    win->style = dwin->origstyle;
-    set_last_run(dwin, win->style);
+    win->styleplus = dwin->origstyleplus;
+    set_last_run(dwin, &win->styleplus);
 
     if (arg)
         termkey = gli_input_from_native(arg);

@@ -25,11 +25,17 @@ int pref_window_borders = FALSE;
 int pref_precise_timing = FALSE;
 int pref_historylen = 20;
 int pref_prompt_defaults = TRUE;
+int pref_color = TRUE;
+int pref_fgcolor = -1;
+int pref_bgcolor = -1;
+int pref_stylehint = TRUE;
+int pref_emph_underline = FALSE;
 
 /* Some constants for my wacky little command-line option parser. */
 #define ex_Void (0)
 #define ex_Int (1)
 #define ex_Bool (2)
+#define ex_Color (3)
 
 static int errflag = FALSE;
 static int inittime = FALSE;
@@ -37,6 +43,7 @@ static int inittime = FALSE;
 static int extract_value(int argc, char *argv[], char *optname, int type,
     int *argnum, int *result, int defval);
 static int string_to_bool(char *str);
+static int string_to_color(const char *str, glsi32 *color);
 
 int main(int argc, char *argv[])
 {
@@ -177,6 +184,18 @@ int main(int argc, char *argv[])
         else if (extract_value(argc, argv, "precise", ex_Bool, &ix, &val, pref_precise_timing))
             pref_precise_timing = val;
 #endif /* !OPT_TIMED_INPUT */
+        else if (extract_value(argc, argv, "color", ex_Bool, &ix, &val, pref_color))
+            pref_color = val;
+        else if (extract_value(argc, argv, "fgcolor", ex_Color, &ix, &val, pref_fgcolor))
+            pref_fgcolor = val;
+        else if (extract_value(argc, argv, "bgcolor", ex_Color, &ix, &val, pref_bgcolor))
+            pref_bgcolor = val;
+        else if (extract_value(argc, argv, "stylehint", ex_Bool, &ix, &val, pref_stylehint))
+            pref_stylehint = val;
+#ifdef A_ITALIC
+        else if (extract_value(argc, argv, "emphul", ex_Bool, &ix, &val, pref_emph_underline))
+            pref_emph_underline = val;
+#endif /* A_ITALIC */
         else {
             printf("%s: unknown option: %s\n", argv[0], argv[ix]);
             errflag = TRUE;
@@ -214,9 +233,19 @@ int main(int argc, char *argv[])
 #ifdef OPT_TIMED_INPUT
         printf("  -precise BOOL: more precise timing for timed input (burns more CPU time) (default 'no')\n");
 #endif /* !OPT_TIMED_INPUT */
+        printf("  -color BOOL: enable color (default 'yes')\n");
+        printf("  -fgcolor COLOR: use given color for foreground\n");
+        printf("  -bgcolor COLOR: use given color for background\n");
+        printf("  -stylehint BOOL: enable style hints (default 'yes')\n");
+#ifdef A_ITALIC
+        printf("  -emphul BOOL: use underline for emphasis instead of italics (default 'no')\n");
+#endif
         printf("  -version: display Glk library version\n");
         printf("  -help: display this list\n");
         printf("NUM values can be any number. BOOL values can be 'yes' or 'no', or no value to toggle.\n");
+        printf("COLOR values can take CSS color names like 'red' or 'navy', three-digit hexadecimal\n"
+               "numbers like '#7F0' (for yellow-green), or six-digit hexadecimal numbers like '#663399'\n"
+               "(for rebeccapurple).\n");
         return 1;
     }
     
@@ -233,6 +262,7 @@ int main(int argc, char *argv[])
     
     /* Initialize things. */
     gli_initialize_misc();
+    gli_initialize_styles();
     gli_initialize_windows();
     gli_initialize_events();
     
@@ -331,6 +361,25 @@ static int extract_value(int argc, char *argv[], char *optname, int type,
             *result = val;
             return TRUE;
             
+        case ex_Color:
+            do {
+                if (*cx == '\0') {
+                    if ((*argnum)+1 >= argc)
+                        break;
+                    cx = argv[(*argnum)+1];
+                    ++*argnum;
+                }
+                if (!string_to_color(cx, &val))
+                    break;
+                if (val < -1)
+                    break;
+                *result = val;
+                return TRUE;
+            } while (0);
+            printf("%s: %s must be followed by a color\n",
+                argv[0], origcx);
+            errflag = TRUE;
+            return FALSE;
     }
     
     return FALSE;
@@ -352,6 +401,11 @@ static int string_to_bool(char *str)
         return FALSE;
         
     return -1;
+}
+
+static int string_to_color(const char *str, glsi32 *color)
+{
+    return gli_get_color_for_name(str, color);
 }
 
 /* This opens a file for reading or writing. (You cannot open a file

@@ -13,14 +13,14 @@
 /* One word */
 typedef struct tbword_struct {
     short type; /* A wd_* constant */
-    short style;
+    styleplus_t styleplus;
     long pos; /* Position in the chars array. */
     long len; /* This is zero for wd_EndLine and wd_EndPage. */
 } tbword_t;
 
 /* One style run */
 typedef struct tbrun_struct {
-    short style;
+    styleplus_t styleplus;
     long pos;
 } tbrun_t;
 
@@ -87,11 +87,9 @@ typedef struct window_textbuffer_struct {
     int inmax;
     long infence;
     long incurs;
-    glui32 origstyle;
+    styleplus_t origstyleplus;
     gidispatch_rock_t inarrayrock;
 } window_textbuffer_t;
-
-extern chtype win_textbuffer_styleattrs[style_NUMSTYLES];
 
 extern window_textbuffer_t *win_textbuffer_create(window_t *win);
 extern void win_textbuffer_destroy(window_textbuffer_t *dwin);

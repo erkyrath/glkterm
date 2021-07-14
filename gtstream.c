@@ -860,7 +860,8 @@ static void gli_set_style(stream_t *str, glui32 val)
     
     switch (str->type) {
         case strtype_Window:
-            str->win->style = val;
+            /* Setting the style this way does not reset inline reverse. */
+            str->win->styleplus.style = val;
             if (str->win->echostr)
                 gli_set_style(str->win->echostr, val);
             break;
@@ -1730,4 +1731,37 @@ glui32 glk_get_buffer_stream(stream_t *str, char *buf, glui32 len)
     }
     return gli_get_buffer(str, buf, NULL, len);
 }
+
+#ifdef GLK_MODULE_GARGLKTEXT
+
+void garglk_set_zcolors(glui32 fg, glui32 bg)
+{
+    garglk_set_zcolors_stream(gli_currentstr, fg, bg);
+}
+
+void garglk_set_zcolors_stream(strid_t str, glui32 fg, glui32 bg)
+{
+    if (!str || !str->writable || str->type != strtype_Window ||
+        (fg > 0xFFFFFF && fg < (glui32)zcolor_Transparent) ||
+        (bg > 0xFFFFFF && bg < (glui32)zcolor_Transparent)) {
+        return;
+    }
+    gli_set_inline_colors(str, fg, bg);
+}
+
+void garglk_set_reversevideo(glui32 reverse)
+{
+    garglk_set_reversevideo_stream(gli_currentstr, reverse);
+}
+
+void garglk_set_reversevideo_stream(strid_t str, glui32 reverse)
+{
+    if (!str || !str->writable || str->type != strtype_Window ||
+        (reverse && reverse != 1)) {
+        return;
+    }
+    gli_set_inline_reverse(str, reverse);
+}
+
+#endif /* GLK_MODULE_GARGLKTEXT */
 
